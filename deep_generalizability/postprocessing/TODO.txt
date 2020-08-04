@@ -1,0 +1,9 @@
+Put Kish eff or some measure of variation in the postprocessing.
+            # store global metrics # TODO make this a 
+            writer.add_scalar('Kish/', kish_effs(nets_weights), curr_step)
+
+Add a dedicated folder for loading and stroing objects
+
+Add seedind to postprocessing stuff
+
+Todo: save state dicts instead of whole models
