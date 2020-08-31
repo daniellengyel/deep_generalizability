@@ -35,16 +35,13 @@ def train(config, folder_path, train_data, test_data):
     train_loader = DataLoader(train_data, batch_size=config["batch_train_size"], shuffle=True)
     test_loader = DataLoader(test_data, batch_size=config["batch_test_size"], shuffle=True)
 
-    # Init neural nets and weights
-    nets = get_nets(config["net_name"], config["net_params"], config["num_nets"], device=device)
-
+    # Init neural nets
     num_nets = config["num_nets"]
-    nets_weights = np.zeros(num_nets)
+    nets = get_nets(config["net_name"], config["net_params"], num_nets, device=device)
 
     #  Define a Loss function and optimizer
-    criterion = torch.nn.CrossEntropyLoss()
-    get_opt_func = get_optimizers(config)
-    optimizers = get_opt_func(nets)
+    criterion = get_criterion(config=config)
+    optimizers = get_optimizers(config, nets)
 
     # define stopping criterion
     stopping_criterion = get_stopping_criterion(config["num_steps"], config["mean_loss_threshold"])
@@ -59,7 +56,7 @@ def train(config, folder_path, train_data, test_data):
     save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=0)
 
     # init number of steps
-    curr_step = 1
+    curr_step = 1 
     mean_loss = float("inf")
 
     # train
@@ -70,29 +67,33 @@ def train(config, folder_path, train_data, test_data):
 
         is_training_curr = True
         while is_training_curr and (not stopping_criterion(mean_loss, curr_step)):
-            if (curr_step % 100) == 1:
-                print("Step: {}".format(curr_step))
-                print("Mean Loss: {}".format(mean_loss))
 
             # do update step for each net
-            nets, nets_weights, steps_taken, mean_loss_after_step = training_step(nets, optimizers,
+            nets, took_step, mean_loss_after_step = nets_training_step(nets, optimizers,
                                                                                 net_data_loaders, criterion,
-                                                                                weight_type, var_noise=config["var_noise"], curr_step=curr_step,
-                                                                                writer=writer, device=device)
+                                                                                var_noise=config["var_noise"],
+                                                                                writer=writer, curr_step=curr_step, device=device)
             
-            if steps_taken == 0:
+            if not took_step:
                 break
             else:
                 mean_loss = mean_loss_after_step
 
             # # Get variation of network weights
-            covs = get_params_cov(nets)
-            writer.add_scalar('WeightVarTrace/', torch.norm(covs), curr_step)
+            if len(nets) > 1:
+                covs = get_params_cov(nets)
+                writer.add_scalar('WeightVarTrace/', torch.norm(covs), curr_step)
 
+            # save nets
+            if (curr_step % config["save_model_freq"]) == 1:
+                save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step)
         
+            if (curr_step % config["print_stat_freq"]) == 1:
+                print("Step: {}".format(curr_step))
+                print("Mean Loss: {}".format(mean_loss))
 
             # update curr_step
-            curr_step += steps_taken
+            curr_step += 1
 
         # # get test error
         # for idx_net in range(num_nets):
@@ -104,11 +105,11 @@ def train(config, folder_path, train_data, test_data):
 
     return nets
 
-def training_step(nets, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,
-                   curr_step=0, writer=None, device=None):
+def nets_training_step(nets, net_optimizers, net_data_loaders, criterion, var_noise=None,
+                    writer=None, curr_step=-1, device=None):
     """Does update step on all networks and computes the weights.
     If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""
-    taking_step = True
+    took_step = True
 
     mean_loss = 0
 
@@ -117,54 +118,75 @@ def training_step(nets, net_optimizers, net_data_loaders, criterion, weight_type
         # get net and optimizer
         net = nets[idx_net]
         optimizer = net_optimizers[idx_net]
+        iter_data_loader = net_data_loaders[idx_net]
+        
+        net, curr_net_taking_step, loss = training_step(net, iter_data_loader, optimizer, criterion, 
+                                                        var_noise=var_noise, writer=writer, curr_step=curr_step, idx_net=idx_net, device=device)
 
-        # get the inputs; data is a list of [inputs, labels]
-        try:
-            data = next(net_data_loaders[idx_net])
-            print(data)
-        except:
-            taking_step = False
+        if not curr_net_taking_step:
+            took_step = False
             break
-        inputs, labels = data
-
-        if device is not None:
-            inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
-                torch.cuda.LongTensor)
-
-        # Compute gradients for input.
-        inputs.requires_grad = True
-
-        # zero the parameter gradients
-        optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward(retain_graph=True)
-        optimizer.step()
-
-        if var_noise is not None:
-            net = add_noise(net, var_noise, device)
-
-        # get gradient
-        param_grads = get_grad_params_vec(net)
-        curr_grad = torch.norm(param_grads)
-
-
-        # store metrics for each net
-        if writer is not None:
-            writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
-            writer.add_scalar('Gradient/train/net_{}'.format(idx_net), curr_grad, curr_step)
-            writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
-            # if (curr_step % 50) == 0:
-            #     # a = time.time()
-            #     is_gpu = device is not None
-            #     trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=is_gpu).trace())
-            #     writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
-            #     # print("Getting trace took {}".format(time.time() - a))
 
         mean_loss += float(loss)
 
-    assert taking_step or (idx_net == 0)
+    assert took_step or (idx_net == 0) # if we can't take a step for one network then we shouldn't be able to take a step for any network. Checking the first net should hence suffice. 
 
-    return nets, nets_weights, 1*taking_step, mean_loss / len(nets)
+    return nets, took_step, mean_loss / len(nets)
+
+
+
+def training_step(net, iter_data_loader, optimizer, criterion, var_noise=None, writer=None, curr_step=-1, idx_net=-1, device=None):
+    """Does update step on all networks and computes the weights.
+    If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""
+
+    took_step = True
+
+
+    # get the inputs; data is a list of [inputs, labels]
+    try:
+        data = next(iter_data_loader)
+    except:
+        took_step = False
+        return net, took_step, None    
+    
+    inputs, labels = data
+
+    if device is not None:
+        inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+            torch.cuda.LongTensor)
+
+    # Compute gradients for input.
+    inputs.requires_grad = True
+
+    # zero the parameter gradients
+    optimizer.zero_grad()
+
+    # forward + backward + optimize
+    outputs = net(inputs)
+    loss = criterion(outputs, labels)
+    loss.backward(retain_graph=True)
+    optimizer.step()
+
+    if var_noise is not None:
+        net = add_noise(net, var_noise, device)
+
+    # get gradient
+    param_grads = get_grad_params_vec(net)
+    curr_grad = torch.norm(param_grads)
+
+    # store metrics for each net
+    if writer is not None:
+        writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
+        writer.add_scalar('Gradient/train/net_{}'.format(idx_net), curr_grad, curr_step)
+        writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
+        # if (curr_step % 50) == 0:
+        #     # a = time.time()
+        #     is_gpu = device is not None
+        #     trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=is_gpu).trace())
+        #     writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
+        #     # print("Getting trace took {}".format(time.time() - a))
+
+
+    assert took_step or (idx_net == 0)
+
+    return net, took_step, float(loss)

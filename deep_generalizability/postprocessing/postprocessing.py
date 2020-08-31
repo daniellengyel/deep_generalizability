@@ -5,6 +5,7 @@ from .utils import *
 from ..utils import *
 from ..save_load import *
 from ..data_getters import *
+from ..training_utils import *
 
 from .sharpness_measures import *
 from .model_related import * 
@@ -16,16 +17,17 @@ import torch
 
 import pickle
 
-def get_data_from_experiment(experiment_path, seed=None):
+def get_data_for_experiment(experiment_path):
     cfs = load_configs(experiment_path)
     if "data_name" in cfs.iloc[0]:
         data_name = cfs.iloc[0]["data_name"]
     else:
         data_name = experiment_path.split("/")[-2]
-    vectorized = cfs.iloc[0]["net_name"] == "SimpleNet"
+    vectorized = cfs.iloc[0]["net_name"] in ["SimpleNet", "LinearNet"]
     reduce_train_per = cfs.iloc[0]["reduce_train_per"]
     seed = cfs.iloc[0]["seed"]
-    train_data, test_data = get_data(data_name, vectorized=vectorized, reduce_train_per=reduce_train_per, seed=seed)
+    meta = cfs.iloc[0]["data_meta"]
+    train_data, test_data = get_data(data_name, vectorized=vectorized, reduce_train_per=reduce_train_per, seed=seed, meta=meta)
     return train_data, test_data
 
 # +++ process experiment results +++
@@ -67,7 +69,6 @@ def get_runs(experiment_folder, names):
     return run_dir
 
 
-
 def get_exp_final_distances(experiment_folder, device=None):
     # init
     dist_dict = {}
@@ -99,118 +100,153 @@ def get_exp_tsne(experiment_folder, step):
 
     return tsne_dict
 
+# Fix seed? 
 def get_exp_grad(experiment_folder, step, use_gpu=False):
     # init
     grad_dict = {}
 
     # get data
-    cfs = load_configs(experiment_folder)
-    train_data, test_data = get_data_from_experiment(experiment_folder)
+    cfgs = load_configs(experiment_folder)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     data = get_random_data_subset(train_data, num_datapoints=1000, seed=0)
 
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
-        grad_dict[exp_name] = get_models_grad(models_dict, data)
+        grad_dict[exp_name] = get_models_grad(models_dict, data, criterion, device=None)
 
         # cache data
         cache_data(experiment_folder, "grad", grad_dict)
 
     return grad_dict
 
-
-def get_exp_loss_acc(experiment_folder, step, FCN=False, device=None):
+# Ok not to have explicit seed since we are using the whole dataset.
+def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_datapoints=-1, device=None):
     print("Get loss acc")
     # init
     loss_dict = {}
     acc_dict = {}
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder, FCN)
-    train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=True)  # fix the batch size
-    test_loader = DataLoader(test_data, batch_size=len(test_data))
+    train_data, test_data = get_data_for_experiment(experiment_folder)
+
+    if test_datapoints == -1:
+        test_datapoints = len(test_data)
+    test_data = get_random_data_subset(test_data, num_datapoints=test_datapoints, seed=seed)
+
+    if train_datapoints == -1:
+        train_datapoints = len(train_data)
+    train_data = get_random_data_subset(train_data, num_datapoints=train_datapoints, seed=seed)
+
+    cfgs = load_configs(experiment_folder)
 
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        criterion = get_criterion(cfgs.loc[exp_name])
+        loss_type = cfgs.loc[exp_name]["criterion"]
         models_dict = get_models(curr_path, step)
-        loss_dict[exp_name], acc_dict[exp_name] = get_models_loss_acc(models_dict, train_loader, test_loader,
+        loss_dict[exp_name], acc_dict[exp_name] = get_models_loss_acc(models_dict, train_data, test_data, criterion, loss_type,
                                                                       device=device)
         # cache data
-        cache_data(experiment_folder, "loss", loss_dict)
-        cache_data(experiment_folder, "acc", acc_dict)
+        cache_data(experiment_folder, "loss", loss_dict, step=step)
+        cache_data(experiment_folder, "acc", acc_dict, step=step)
 
     return loss_dict, acc_dict
 
 
 # get eigenvalues of specific model folder.
-def get_exp_eig(experiment_folder, step, num_eigenthings=5, FCN=False, device=None, only_vals=True):
+def get_exp_eig(experiment_folder, step, num_eigenthings=5, device=None, only_vals=True):
     # init
     eigenvalue_dict = {}
-    loss = torch.nn.CrossEntropyLoss()
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder, FCN)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     train_loader = DataLoader(train_data, batch_size=5000, shuffle=True)  # fix the batch size
     test_loader = DataLoader(test_data, batch_size=len(test_data))
+    cfgs = load_configs(experiment_folder)
 
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
-        eigenvalue_dict[exp_name] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings,
-                                                   full_dataset=True, device=device, only_vals=only_vals)
+        eigenvalue_dict[exp_name] = get_models_eig(models_dict, train_loader, test_loader, criterion, num_eigenthings,
+                                                   full_dataset=True, device=device, only_vals=only_vals, seed=seed)
 
         # cache data
-        cache_data(experiment_folder, "eig", eigenvalue_dict)
+        cache_data(experiment_folder, "eig", eigenvalue_dict, step=step)
 
     return eigenvalue_dict
 
 
-def get_exp_trace(experiment_folder, step, seed=0, FCN=False, device=None):
+def get_exp_trace(experiment_folder, step, seed=0, device=None):
     # init
     trace_dict = {}
     meta_dict = {"seed": seed}
-    set_seed(seed)
-    criterion = torch.nn.CrossEntropyLoss()
+    cfgs = load_configs(experiment_folder)
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder, FCN)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     train_loader = DataLoader(train_data, batch_size=5000, shuffle=True)  # fix the batch size
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
+        
         trace_dict[exp_name] = get_models_trace(models_dict, train_loader, criterion, full_dataset=False, verbose=True,
-                                                device=device)
+                                                device=device, seed=seed)
 
         # cache data
-        cache_data(experiment_folder, "trace", trace_dict)
+        cache_data(experiment_folder, "trace", trace_dict, step=step)
 
     return trace_dict
+
+def get_exp_point_loss(experiment_folder, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
+    results_dict = {}
+    meta_dict = {"seed": seed}
+    cfgs = load_configs(experiment_folder)
+
+    # get data
+    train_data, test_data = get_data_for_experiment(experiment_folder)
+    if on_test_set:
+        data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
+    else:
+        data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
+
+    # iterate through models
+    for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        loss_type = cfgs.loc[exp_name]["criterion"]
+        models_dict = get_models(curr_path, step)
+        results_dict[exp_name] = get_point_loss_filters(models_dict, data, loss_type, device=device)
+
+        # cache data
+        if should_cache:
+            cache_data(experiment_folder, "point_loss", results_dict, meta_dict, step=step)
+
+    return results_dict
 
 def get_exp_margins(experiment_folder, softmax_outputs=False, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
     margins_dict = {}
     meta_dict = {"seed": seed}
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     if on_test_set:
         data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
     else:
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
 
-
-    set_seed(seed)
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
 
         models_dict = get_models(curr_path, step)
-        margins_dict[exp_name] = get_margins_filters(models_dict, data, device=device, softmax_outputs=softmax_outputs)
+        margins_dict[exp_name] = get_margins_filters(models_dict, data, device=device, softmax_outputs=softmax_outputs, seed=seed)
 
         # cache data
         if should_cache:
-            cache_data(experiment_folder, "margins", margins_dict, meta_dict)
+            cache_data(experiment_folder, "margins", margins_dict, meta_dict, step=step)
 
     return margins_dict
 
@@ -219,23 +255,23 @@ def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoi
     meta_dict = {"seed": seed}
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     if on_test_set:
         data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
     else:
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
 
+    cfgs = load_configs(experiment_folder)
 
-    set_seed(seed)
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
-        traces_dict[exp_name] = get_point_traces(models_dict, data, device=device)
+        traces_dict[exp_name] = get_point_traces(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
         if should_cache:
-            cache_data(experiment_folder, "point_traces", traces_dict, meta_dict)
+            cache_data(experiment_folder, "point_traces", traces_dict, meta_dict, step=step)
 
     return traces_dict
 
@@ -244,23 +280,24 @@ def get_exp_point_eig_density_traces(experiment_folder, step, seed, device=None,
     meta_dict = {"seed": seed}
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     if on_test_set:
         data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
     else:
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
-
+    
+    cfgs = load_configs(experiment_folder)
 
     set_seed(seed)
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step, device=device)
-        traces_dict[exp_name] = get_point_eig_density_traces(models_dict, data, device=device)
+        traces_dict[exp_name] = get_point_eig_density_traces(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
         if should_cache:
-            cache_data(experiment_folder, "point_eig_density_traces", traces_dict, meta_dict)
+            cache_data(experiment_folder, "point_eig_density_traces", traces_dict, meta_dict, step=step)
 
     return traces_dict
 
@@ -269,36 +306,60 @@ def get_exp_point_eig_density(experiment_folder, step, seed, device=None, num_da
     meta_dict = {"seed": seed}
 
     # get data
-    train_data, test_data = get_data_from_experiment(experiment_folder)
+    train_data, test_data = get_data_for_experiment(experiment_folder)
     if on_test_set:
         data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
     else:
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
 
+    cfgs = load_configs(experiment_folder)
 
-    set_seed(seed)
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-
+        criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step, device=device)
-        eig_density_dict[exp_name] = get_point_eig_density(models_dict, data, device=device)
+        eig_density_dict[exp_name] = get_point_eig_density(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
         if should_cache:
-            cache_data(experiment_folder, "point_eig_density", eig_density_dict, meta_dict)
+            cache_data(experiment_folder, "point_eig_density", eig_density_dict, meta_dict, step=step)
 
     return eig_density_dict
 
-def main(experiment_name):
+def get_exp_linear_loss_trace(experiment_folder, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
+    results_dict = {}
+    meta_dict = {"seed": seed}
+    cfgs = load_configs(experiment_folder)
+
+    # get data
+    train_data, test_data = get_data_for_experiment(experiment_folder)
+    if on_test_set:
+        data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
+    else:
+        data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
+
+    # iterate through models
+    for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        loss_type = cfgs.loc[exp_name]["criterion"]
+        models_dict = get_models(curr_path, step)
+        results_dict[exp_name] = get_linear_loss_trace(models_dict, data, loss_type, device=device)
+
+        # cache data
+        if should_cache:
+            cache_data(experiment_folder, "linear_{}_trace".format(loss_type), results_dict, meta_dict, step=step)
+
+    return results_dict
+
+def main():
     # # # save analysis processsing
 
-    root_folder = os.environ["PATH_TO_GEN_FOLDER"]
-    data_name = "concentric_balls"
-    exp = "Aug04_15-15-27_Daniels-MacBook-Pro-4.local"
+    root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
+    data_name = "MNIST"
+    exp = "Aug31_15-11-28_Daniels-MacBook-Pro-4.local"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
-    is_gpu = True
+    is_gpu = False
     if is_gpu:
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
@@ -307,23 +368,22 @@ def main(experiment_name):
         # device = torch.device("cpu")
 
     get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
-                             "Trace"])  # TODO does not find acc and var
+                             "Trace", "Gradient"])  # TODO does not find acc and var
 
     
-    get_exp_point_traces(experiment_folder, -1, 0, device, num_datapoints=100, on_test_set=False,)
-
+    print("Getting Point Traces.")
     a = time.time()
-
-    get_exp_point_eig_density(experiment_folder, -1, 0, device, num_datapoints=1000, on_test_set=False, should_cache=True)
-
+    # get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
     print(time.time() - a)
+    # print("Getting Point Density.")
+    # get_exp_point_eig_density(experiment_folder, -1, 0, device, num_datapoints=1000, on_test_set=False, should_cache=True)
 
     # get_exp_final_distances(experiment_folder, device=device)
 
     # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
-    get_exp_trace(experiment_folder, -1, FCN=True, device=device)
+    # get_exp_trace(experiment_folder, -1, device=device)
 
-    get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
+    get_exp_loss_acc(experiment_folder, -1, train_datapoints=5000, test_datapoints=5000, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 
@@ -332,7 +392,7 @@ def main(experiment_name):
 
 
 if __name__ == "__main__":
-    main("")
+    main()
     # import argparse
     #
     # parser = argparse.ArgumentParser(description='Postprocess experiment.')

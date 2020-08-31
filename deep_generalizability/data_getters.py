@@ -17,7 +17,7 @@ PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_GEN_FOLDER"])
 
 def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=None):
     if data_name == "gaussian":
-        train_data, test_data = _get_gaussian(seed=seed)
+        train_data, test_data = _get_gaussian(meta=meta, seed=seed)
     elif data_name == "concentric_balls":
         train_data, test_data = _get_concentric_balls(meta=meta, seed=seed)
     elif data_name == "mis_gauss":
@@ -42,7 +42,7 @@ def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=No
 def get_random_data_subset(data, num_datapoints=1, seed=0):
     set_seed(seed)
     data_loader = DataLoader(data, batch_size=num_datapoints, shuffle=True)
-    return next(iter(data_loader))
+    return DataWrapper(next(iter(data_loader)))
 
 
 def _get_MNIST():
@@ -117,21 +117,18 @@ def _get_concentric_balls(meta, seed=0):
 
     return train_data, test_data
 
-def _get_gaussian(seed=0):
+def _get_gaussian(meta, seed=0):
     set_seed(seed)
     # get data
     gaussian_params = []
 
-    cov_1 = np.array([[1, 1 / 2.], [1 / 2., 1]])
-    cov_2 = np.array([[1, 1 / 2.], [1 / 2., 1]])
+    dim = meta["dim"]
 
-    mean_1 = np.array([0, 0])
-    mean_2 = np.array([2, 0])
-
-    means = [mean_1, mean_2]
-    covs = [cov_1, cov_2]
-    training_nums = 500
-    test_nums = 100
+    means = np.eye(dim)
+    covs = [np.eye(dim) for _ in range(dim)]
+    
+    training_nums = meta["training_nums"]
+    test_nums = meta["test_nums"]
 
     train_gaussian = GaussianMixture(means, covs, len(means) * [training_nums])
     test_gaussian = GaussianMixture(means, covs, len(means) * [test_nums])
@@ -156,6 +153,19 @@ def _get_mis_gauss(seed=0):
     test_gaussian = MisGauss(means, covs, len(means) * [test_nums])
 
     return train_gaussian, test_gaussian
+
+class DataWrapper(Dataset):
+    """Wrapper for data of the form:
+    data[0]: Torch Input data, data[1]: Torch Output Data"""
+
+    def __init__(self, data):
+        self.data = data
+
+    def __getitem__(self, index):
+        return self.data[0][index], self.data[1][index]
+    
+    def __len__(self):
+        return len(self.data[0])
 
 class GaussianMixture(Dataset):
     """Dataset gaussian mixture. Points of first gaussian are mapped to 0 while points in the second are mapped 1.

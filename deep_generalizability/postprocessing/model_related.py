@@ -8,6 +8,8 @@ import torchvision
 from sklearn.manifold import TSNE
 
 from .utils import *
+from ..utils import *
+from ..training_utils import get_criterion
 
 import yaml, os, sys, re
 
@@ -17,24 +19,53 @@ from hessian_eigenthings import compute_hessian_eigenthings
 import pickle
 
 
-def get_models_loss_acc(models, train_loader, test_loader, device=None):
+def get_models_loss_acc(models, train_data, test_data, criterion, loss_type, device=None, seed=None):
+    set_seed(seed)
+
     loss_dict = {}
     acc_dict = {}
+
+    train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=False)
+    test_loader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
+
+    is_binary_classification = loss_type in ["MSE", "BinaryExponentialLoss"]
 
     for k, m in models.items():
         if device is not None:
             m = m.to(device)
-        loss_dict[k] = (get_net_loss(m, train_loader, device=device), get_net_loss(m, test_loader, device=device))
-        acc_dict[k] = (get_net_accuracy(m, train_loader, device=device), get_net_accuracy(m, test_loader, device=device))
+        loss_dict[k] = (get_net_loss(m, train_loader, criterion, device=device), get_net_loss(m, test_loader, criterion, device=device))
+        acc_dict[k] = (get_net_accuracy(m, train_loader, is_binary_classification, device=device), get_net_accuracy(m, test_loader, is_binary_classification, device=device))
     return loss_dict, acc_dict
 
+def get_point_loss_filters(models, data, loss_type, device=None):
 
+    results_filters = {}
+    if device is not None:
+        is_gpu = True
+    else:
+        is_gpu = False
 
-def get_models_grad(models, data, device=None):
+    data_loader = DataLoader(data, batch_size=1, shuffle=False)
+    criterion = get_criterion(loss_type=loss_type)
+    is_binary_classification = loss_type in ["MSE", "BinaryExponentialLoss"]
+
+    for k, m in models.items():
+        
+        point_losses = []
+        for i, (inputs, labels) in enumerate(data_loader):
+            outputs = m(inputs)
+            point_losses.append(float(criterion(outputs, labels)))
+        point_losses = np.array(point_losses)
+
+        correct_filter = get_correct_filter(m, data, device=device)
+        
+        results_filters[k] = (point_losses, correct_filter)
+    return results_filters
+
+def get_models_grad(models, data, criterion, device=None):
     grad_dict = {}
 
     data_loader = DataLoader(data, batch_size=len(data), shuffle=False)
-    criterion = torch.nn.CrossEntropyLoss()
 
 
     # get trace

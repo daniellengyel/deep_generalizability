@@ -6,7 +6,6 @@ import sys
 import re
 
 from .utils import *
-from .lineages import *
 
 import itertools
 
@@ -105,39 +104,24 @@ def get_metric_at_training_step(runs, var_name, step, exp_ids=None):
 
     return exp_res
 
-def get_filtered_training_metrics(exp_dict, exp_ids, metric_name, path_aggregator=None):
-    """Will apply lineages if a proper resampling array exists. Only returns results for arrays corresponding
-    to the lineage of the spawn particle. 
-    Assumes every experiement has same number of steps"""
-    exp_sampling_arr = exp_dict["resampling_idxs"]
-    exp_runs = exp_dict["runs"]
+def get_timeseries_training_metrics(exp_ids, metric_name, runs_data=None, exp_folder=None, path_aggregator=None):
+    """Assumes every experiement has same number of steps"""
+    
+    assert (runs_data is not None) or (exp_foler is not None)
 
-    y_arr = []
-    x_arr = []
+    if runs_data is None:
+        runs_data, cached_meta_data = load_cached_data(exp_folder, "runs")
+        if runs_data is None:
+            raise Exception("Did not cache runs yet. Run the postprocessing script to store runs.")
 
-    for i, exp_id in enumerate(exp_ids):
 
-        sampling_arr = exp_dict["resampling_idxs"][exp_id]
-        x_vals, y_vals = get_runs_arr(exp_dict, metric_name, exp_ids, is_mean=False)
+    x_vals, y_vals = get_runs_arr(runs_data, metric_name, exp_ids, running_average_gamma=1, is_mean=False)
+    y_vals = [y_vals[i].T for i in range(len(exp_ids))]
+    x_vals = np.array([x_vals[0] for _ in range(len(y_vals))])
 
-        if len(sampling_arr) <= 2:
-            Ys = y_vals[i].T
-        else:
-            resampling_arr = np.array([sampling_arr[str(i)] for i in range(len(sampling_arr))])[1:-1] # Note, each element is the parent particle that was chosen. So the lineages are shifted to align with the values.
-
-            curr_lineage, curr_assignments = find_lineages(resampling_arr)
-            Ys = get_linages_vals(curr_lineage,  y_vals[i], x_arr=x_vals[i]).values()
-        
-        # TODO do selector stuff here
-        if path_aggregator is not None:
-            Ys = np.array([np.mean(Ys, axis=0)])
-
-        y_arr.append(Ys)
-        x_arr.append(np.array([x_vals[0] for _ in range(len(Ys))]))
-
-    y_arr = np.array(y_arr)
-    x_arr = np.array(x_arr)
-    y_arr = np.concatenate(y_arr, axis=0)
-    return y_arr, x_arr
+    y_vals = np.array(y_vals)
+    x_vals = np.array(x_vals)
+    y_vals = np.concatenate(y_vals, axis=0)
+    return x_vals, y_vals
 
 

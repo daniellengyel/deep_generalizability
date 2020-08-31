@@ -44,16 +44,29 @@ class LeNet(Module):
 
 
 class SimpleNet(Module):
+   
+
     def __init__(self, inp_dim, out_dim, width, num_layers):
         super(SimpleNet, self).__init__()
 
-        self.fc1 = nn.Linear(inp_dim, width)
+        self.fc_input = nn.Linear(inp_dim, width)
         self.layers = nn.ModuleList([nn.Linear(width, width) for _ in range(num_layers - 1)])
-        self.fc2 = nn.Linear(width, out_dim)
+        self.fc_final = nn.Linear(width, out_dim)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc_input(x))
         for i in range(len(self.layers)):
             x = F.relu(self.layers[i](x))
-        x = self.fc2(x)
+        x = self.fc_final(x)
+        return x
+
+class LinearNet(Module):
+    def __init__(self, inp_dim, out_dim):
+        super(LinearNet, self).__init__()
+
+        self.fc_layer = nn.Linear(inp_dim, out_dim)
+    
+
+    def forward(self, x):
+        x = self.fc_layer(x)
         return x

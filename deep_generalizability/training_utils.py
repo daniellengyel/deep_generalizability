@@ -5,7 +5,7 @@ import torchvision
 import torch.optim as optim
 
 from .utils import *
-from .nets.Nets import SimpleNet, LeNet
+from .nets.Nets import SimpleNet, LeNet, LinearNet
 
 from torch.utils.data import DataLoader
 import os, time
@@ -16,56 +16,44 @@ def get_nets(net_name, net_params, num_nets, device=None):
         nets = [SimpleNet(*net_params) for _ in range(num_nets)]
     elif net_name == "LeNet":
         nets = [LeNet(*net_params) for _ in range(num_nets)]
+    elif net_name == "LinearNet":
+        nets = [LinearNet(*net_params) for _ in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(net_name))
     if device is not None:
         nets = [net.to(device) for net in nets]
     return nets
 
-def get_optimizers(config):
-    def helper(nets, optimizers=None):
-        num_nets = config["num_nets"]
-
-        if optimizers is None:
-            # optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"]) for i in range(num_nets)]
-            optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                                    momentum=config["momentum"]) for i in range(num_nets)]
-            if ("lr_decay" in config) and (config["lr_decay"] is not None) and (config["lr_decay"] != 0):
-                optimizers = [torch.optim.lr_scheduler.ExponentialLR(optimizer=o, gamma=config["lr_decay"]) for o in
-                              optimizers]
-        else:
-            # update opt with new nets
-            for i in range(len(optimizers)):
-                o = optimizers[i]
-                nn = nets[i]
-                o.param_groups = []
-
-                param_groups = list(nn.parameters())
-                if len(param_groups) == 0:
-                    raise ValueError("optimizer got an empty parameter list")
-                if not isinstance(param_groups[0], dict):
-                    param_groups = [{'params': param_groups}]
-
-                for param_group in param_groups:
-                    o.add_param_group(param_group)
-
-        return optimizers
-    return helper
-
-def get_resampling_checker(sampling_tau, sampling_wait, sampling_stop, ess_threshold, beta):
-    if sampling_stop is None:
-        sampling_stop = float("inf")
-    if sampling_wait is None:
-        sampling_wait = 0
-    assert not ((ess_threshold is not None) and (sampling_tau is not None))
-    if ess_threshold is not None:
-        should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0) and (s >= sampling_wait)
-    elif sampling_tau is not None:
-        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (
-                beta != 0) and (s < sampling_stop)
+def get_optimizers(config, nets):
+    num_nets = config["num_nets"]
+    if config["optimizer"] == "SGD":
+        optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
+                            momentum=config["momentum"]) for i in range(num_nets)]
+        if ("lr_decay" in config) and (config["lr_decay"] is not None) and (config["lr_decay"] != 0):
+            optimizers = [torch.optim.lr_scheduler.ExponentialLR(optimizer=o, gamma=config["lr_decay"]) for o in
+                        optimizers]
+    elif config["optimizer"] == "Adam":
+        optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"]) for i in range(num_nets)]
     else:
-        should_resample = lambda w, s: False
-    return should_resample
+        raise NotImplementedError("{} is not implemented.".format(config["optimizer"]))
+    return optimizers
+
+def get_criterion(config=None, loss_type=None):
+    assert (config is not None) or (loss_type is not None)
+    if loss_type is None:
+        loss_type = config["criterion"]
+    if loss_type == "MSE":
+        return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs.view(-1), (2.0 * labels.float() - 1.0)) # torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
+    elif loss_type == "cross-entropy":
+        return torch.nn.CrossEntropyLoss()
+    elif loss_type == "MultiMarginLoss":
+        return torch.nn.MultiMarginLoss()
+    elif loss_type == "BinaryExponentialLoss":
+        def binary_exp_loss(outputs, labels):
+            return  ( -(2.0 * labels.float() - 1.0) * outputs.view(-1) ).exp().mean()
+        return binary_exp_loss
+    else:   
+        raise NotImplementedError("{} is not implemented.".format(loss_type))
 
 def get_stopping_criterion(num_steps, mean_loss_threshold):
     if (num_steps is not None) and (mean_loss_threshold is not None):
@@ -77,6 +65,7 @@ def get_stopping_criterion(num_steps, mean_loss_threshold):
     else:
         raise Exception("Error: Did not provide a stopping criterion.")
     return stopping_criterion
+
 
 def add_noise(net, var_noise, device=None):
     with torch.no_grad():

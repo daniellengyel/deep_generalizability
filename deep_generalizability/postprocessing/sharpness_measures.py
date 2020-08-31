@@ -20,41 +20,43 @@ from hessian_eigenthings import compute_hessian_eigenthings
 import pickle
 
 
-def get_point_traces(models, data, device=None):
-    criterion = torch.nn.CrossEntropyLoss()
+def get_point_traces(models, data, criterion, device=None, seed=None):
+    set_seed(seed)
+
     traces = {}
     if device is not None:
         is_gpu = True
     else:
         is_gpu = False
 
+    dataloader = DataLoader(data, batch_size=1, shuffle=False) 
+
     for k, m in models.items():
         curr_traces = []
-        for i in range(len(data[0])):
-            inputs, labels = data[0][i], data[1][i]
-            inputs, labels = inputs.view(1, *inputs.shape), labels.view(1, *labels.shape)
+        for i, (inputs, labels) in enumerate(dataloader):
 
             if device is not None:
                 inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
                     torch.cuda.LongTensor)
 
-            curr_traces.append(np.mean(hessian(m, criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=1000)))
+            curr_traces.append(np.mean(hessian(m, criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=100)))
         traces[k] = curr_traces
     return traces
 
-def get_point_eig_density_traces(models, data, device=None):
-    criterion = torch.nn.CrossEntropyLoss()
+def get_point_eig_density_traces(models, data, criterion, device=None, seed=None):
+    set_seed(seed)
+
     traces = {}
     if device is not None:
         is_gpu = True
     else:
         is_gpu = False
 
+    dataloader = DataLoader(data, batch_size=1, shuffle=False) 
+
     for k, m in models.items():
         curr_traces = []
-        for i in range(len(data[0])):
-            inputs, labels = data[0][i], data[1][i]
-            inputs, labels = inputs.view(1, *inputs.shape), labels.view(1, *labels.shape)
+        for i, (inputs, labels) in enumerate(dataloader):
 
             if device is not None:
                 inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
@@ -78,19 +80,20 @@ def compute_trace_from_eig_density(exp_eig_density_dict):
             traces[exp_id][model_idx] = np.array(traces[exp_id][model_idx])
     return traces
 
-def get_point_eig_density(models, data, device=None):
-    criterion = torch.nn.CrossEntropyLoss()
+def get_point_eig_density(models, data, criterion, device=None, seed=None):
+    set_seed(seed)
+
     eig_density = {}
     if device is not None:
         is_gpu = True
     else:
         is_gpu = False
 
+    dataloader = DataLoader(data, batch_size=1, shuffle=False) 
+
     for k, m in models.items():
         curr_eig_density = []
-        for i in range(len(data[0])):
-            inputs, labels = data[0][i], data[1][i]
-            inputs, labels = inputs.view(1, *inputs.shape), labels.view(1, *labels.shape)
+        for i, (inputs, labels) in enumerate(dataloader):
 
             if device is not None:
                 inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
@@ -101,7 +104,9 @@ def get_point_eig_density(models, data, device=None):
     return eig_density
 
 # get eigenvalues of specific model folder.
-def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, full_dataset=True, device=None, only_vals=True):
+def get_models_eig(models, train_loader, test_loader, criterion, num_eigenthings=5, full_dataset=True, device=None, only_vals=True, seed=None):
+    set_seed(seed)
+
     eig_dict = {}
     # get eigenvals
     for k, m in models.items():
@@ -113,12 +118,12 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, f
             is_gpu = False
 
         eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-                                                           loss, num_eigenthings, use_gpu=is_gpu,
+                                                           criterion, num_eigenthings, use_gpu=is_gpu,
                                                            full_dataset=full_dataset, mode="lanczos",
                                                            max_steps=100, tol=1e-2)
         try:
             #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-            #                                                        loss, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
+            #                                                        criterion, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
             #                                                        max_steps=50)
             if only_vals:
                 eig_dict[k] = eigenvals
@@ -131,7 +136,9 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, f
 
 
 
-def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False, device=None):
+def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False, device=None, seed=None):
+    set_seed(seed)
+
     trace_dict = {}
 
     hessian_dataloader = []

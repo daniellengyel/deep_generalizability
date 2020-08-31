@@ -22,6 +22,8 @@ def get_file_stamp():
     return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S"), host_name)
 
 def set_seed(seed):
+    if seed is None:
+        seed = 0
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     # torch.backends.cudnn.deterministic = True
@@ -212,7 +214,7 @@ def get_average_output(nets, inp):
     return np.mean(outs, axis=0)
 
 
-def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
+def get_net_accuracy(net, data_loader, is_binary_classification=False, full_dataset=False, device=None):
     correct = 0
     total = 0
 
@@ -224,17 +226,21 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
             inputs = inputs.float()
 
         outputs = net(inputs)
-        _, predicted = torch.max(outputs, 1)
+        if is_binary_classification:
+            num_correct = ((outputs.view(-1) >= 0) == labels).sum().item()
+        else:
+            _, predicted = torch.max(outputs, 1)
+            num_correct = (predicted == labels).sum().item()
+
         total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+        correct += num_correct
 
         if not full_dataset:
             break
     return correct / float(total)
 
 
-def get_net_loss(net, data_loader, full_dataset=False, device=None):
-    criterion = torch.nn.CrossEntropyLoss()
+def get_net_loss(net, data_loader, criterion, full_dataset=False, device=None):
 
     loss_sum = 0
     for idx, (inputs, labels) in enumerate(data_loader):
@@ -254,7 +260,7 @@ def get_net_loss(net, data_loader, full_dataset=False, device=None):
 
 def get_model_outputs(net, data, softmax_outputs=False, device=None):
 
-    inputs, labels = data
+    inputs, labels = iter(DataLoader(data, batch_size=len(data))).next()
 
     if device is not None:
         inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
@@ -269,6 +275,17 @@ def get_model_outputs(net, data, softmax_outputs=False, device=None):
         outputs = m(outputs)
         
     return outputs
+
+def get_correct_filter(net, data, is_binary_classification=False, device=None):
+    inputs, labels = iter(DataLoader(data, batch_size=len(data), shuffle=False)).next()
+    outputs = get_model_outputs(net, data, False, device)
+    if is_binary_classification:
+        correct_filter = (outputs.view(-1) >= 0) == labels
+    else:
+        _, predicted = torch.max(outputs, 1)
+        correct_filter = predicted == labels
+    correct_filter = correct_filter.detach().numpy()
+    return correct_filter
 
 
 def is_same_model(model1, model2):
