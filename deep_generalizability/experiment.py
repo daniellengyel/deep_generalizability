@@ -15,7 +15,7 @@ import pickle
 config = {}
 
 config["seed"] = 0
-config["device"] = "gpu"
+config["device"] = "cpu"
 
 # data specific
 data_name = "CIFAR10"
@@ -74,15 +74,15 @@ elif config["net_name"] == "LeNet":
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["learning_rate"] = 0.45 # tune.grid_search(list(np.linspace(0.01, 0.04, 4))) 
+config["learning_rate"] = 0.1 # tune.grid_search(list(np.linspace(0.1, 0.3, 10))) 
 config["momentum"] = 0
 
-config["batch_train_size"] = tune.grid_search([32])
+config["batch_train_size"] = tune.grid_search([16, 32, 256])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy" # "cross-entropy"
 
-config["num_steps"] = 10000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 2500  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.01 # 0.15
 
 
