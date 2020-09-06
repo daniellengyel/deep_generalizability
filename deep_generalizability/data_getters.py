@@ -13,7 +13,7 @@ from random import random
 
 
 
-PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_GEN_FOLDER"])
+PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_DEEP_FOLDER"])
 
 def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=None):
     if data_name == "gaussian":

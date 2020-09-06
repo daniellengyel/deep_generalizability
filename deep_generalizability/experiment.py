@@ -15,7 +15,7 @@ import pickle
 config = {}
 
 config["seed"] = 0
-config["device"] = "cpu"
+config["device"] = "gpu"
 
 # data specific
 data_name = "CIFAR10"
@@ -80,7 +80,7 @@ config["momentum"] = 0
 config["batch_train_size"] = tune.grid_search([32])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
-config["criterion"] = "MSE" # "cross-entropy"
+config["criterion"] = "cross-entropy" # "cross-entropy"
 
 config["num_steps"] = 10000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.01 # 0.15
