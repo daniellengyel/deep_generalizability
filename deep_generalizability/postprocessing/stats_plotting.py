@@ -19,13 +19,15 @@ from ..utils import *
 
 import itertools
 
+from scipy.stats import linregress
 
-def get_end_stats(exp_folder):
+
+def get_end_stats(exp_folder, step=-1):
     
     runs, _ = load_cached_data(exp_folder, "runs")
-    trace, _ = load_cached_data(exp_folder, "trace", step=-1) # assume the trace i get is from the end.
-    acc, _ = load_cached_data(exp_folder, "acc", step=-1)
-    loss, _ = load_cached_data(exp_folder, "loss", step=-1)
+    trace, _ = load_cached_data(exp_folder, "trace", step=step) # assume the trace i get is from the end.
+    acc, _ = load_cached_data(exp_folder, "acc", step=step)
+    loss, _ = load_cached_data(exp_folder, "loss", step=step)
     dist, _ = load_cached_data(exp_folder, "dist")
 
     stats_dict = {}
@@ -100,7 +102,7 @@ def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bo
                    plots_names,
                    scatterpoints=1,
                    loc='best',
-                   ncol=3,
+                   ncol=2,
                    )
     elif len(plots) > 1:
         plt.legend(loc='upper right')
@@ -259,9 +261,16 @@ def hp_data_func_plot(experiment_folder, data_func, X_axis_name, Y_axis_name, pl
 
             plots, plots_names = data_func(exp_ids, plots, plots_names, comb)
 
+def plot_regression(x_data, y_data):
+    min_x = np.min(x_data)
+    max_x = np.max(x_data)
+    slope, intercept, r_value, _, _ = linregress(x_data, y_data)
+    plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept])
+    plot_name = "rvalue: {:.2f}".format(r_value)
+    return plot_corr, plot_name
 
 # ++++ functions for hp_data_func_plot ++++
-def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_correct_filter=False):
+def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_correct_filter=False, draw_correlation=False):
     def xy_func(exp_ids, plots, plots_names, comb=None):
         x_correct = []
         y_correct = []
@@ -289,19 +298,37 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
             x_incorrect = np.concatenate(x_incorrect, axis=0)
             y_incorrect = np.concatenate(y_incorrect, axis=0)
 
+
             if len(x_correct) > 0:
                 plots.append(plt.scatter(x_correct.T, y_correct.T))
-                plots_names.append("Correct, {}".format(comb))
+                plots_names.append("Correct")
+
+                if draw_correlation:
+                    plot_corr, plot_name = plot_regression(x_correct, y_correct)
+                    plots.append(plot_corr)
+                    plots_names.append("Correct, {}".format(plot_name))
+
+                    plot_corr, plot_name = plot_regression(x_incorrect, y_incorrect)
+                    plots.append(plot_corr)
+                    plots_names.append("Incorrect, {}".format(plot_name))
 
             if len(x_incorrect) > 0:
                 plots.append(plt.scatter(x_incorrect.T, y_incorrect.T))
-                plots_names.append("Incorrect, {}".format(comb))
+                plots_names.append("Incorrect")
         else:
             x_data = np.concatenate(x_correct, axis=0)
             y_data = np.concatenate(y_correct, axis=0)
+
+            min_x = 0 #np.min(np.min(x_data), np.min(x_data))
+            max_x = max(np.max(x_data), np.max(x_data))
             
             plots.append(plt.scatter(x_data.T, y_data.T))
             plots_names.append("All, {}".format(comb))
+
+            if draw_correlation:
+                plot_corr, plot_name = plot_regression(x_data, y_data)
+                plots.append(plot_corr)
+                plots_names.append(plot_name)
         
         return plots, plots_names
         

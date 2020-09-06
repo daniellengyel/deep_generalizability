@@ -43,7 +43,7 @@ def get_criterion(config=None, loss_type=None):
     if loss_type is None:
         loss_type = config["criterion"]
     if loss_type == "MSE":
-        return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs.view(-1), (2.0 * labels.float() - 1.0)) # torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
+        return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs, torch.eye(outputs.shape[1])[labels]) # torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
     elif loss_type == "cross-entropy":
         return torch.nn.CrossEntropyLoss()
     elif loss_type == "MultiMarginLoss":

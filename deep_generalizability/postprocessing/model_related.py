@@ -28,7 +28,7 @@ def get_models_loss_acc(models, train_data, test_data, criterion, loss_type, dev
     train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=False)
     test_loader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
 
-    is_binary_classification = loss_type in ["MSE", "BinaryExponentialLoss"]
+    is_binary_classification = loss_type in ["BinaryExponentialLoss"]
 
     for k, m in models.items():
         if device is not None:

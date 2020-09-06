@@ -93,6 +93,8 @@ def get_exp_tsne(experiment_folder, step):
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         tsne_dict[exp_name] = get_models_tsne(models_dict)
 
         # cache data
@@ -114,6 +116,8 @@ def get_exp_grad(experiment_folder, step, use_gpu=False):
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         grad_dict[exp_name] = get_models_grad(models_dict, data, criterion, device=None)
 
         # cache data
@@ -146,6 +150,8 @@ def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_
         criterion = get_criterion(cfgs.loc[exp_name])
         loss_type = cfgs.loc[exp_name]["criterion"]
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         loss_dict[exp_name], acc_dict[exp_name] = get_models_loss_acc(models_dict, train_data, test_data, criterion, loss_type,
                                                                       device=device)
         # cache data
@@ -170,6 +176,8 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, device=None, only_va
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         eigenvalue_dict[exp_name] = get_models_eig(models_dict, train_loader, test_loader, criterion, num_eigenthings,
                                                    full_dataset=True, device=device, only_vals=only_vals, seed=seed)
 
@@ -194,6 +202,8 @@ def get_exp_trace(experiment_folder, step, seed=0, device=None):
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         
         trace_dict[exp_name] = get_models_trace(models_dict, train_loader, criterion, full_dataset=False, verbose=True,
                                                 device=device, seed=seed)
@@ -219,6 +229,8 @@ def get_exp_point_loss(experiment_folder, step=-1, seed=0, device=None, num_data
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         loss_type = cfgs.loc[exp_name]["criterion"]
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         results_dict[exp_name] = get_point_loss_filters(models_dict, data, loss_type, device=device)
 
         # cache data
@@ -242,6 +254,8 @@ def get_exp_margins(experiment_folder, softmax_outputs=False, step=-1, seed=0, d
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
 
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         margins_dict[exp_name] = get_margins_filters(models_dict, data, device=device, softmax_outputs=softmax_outputs, seed=seed)
 
         # cache data
@@ -267,6 +281,8 @@ def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoi
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         traces_dict[exp_name] = get_point_traces(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
@@ -293,6 +309,8 @@ def get_exp_point_eig_density_traces(experiment_folder, step, seed, device=None,
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step, device=device)
+        if models_dict is None:
+            continue
         traces_dict[exp_name] = get_point_eig_density_traces(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
@@ -318,6 +336,9 @@ def get_exp_point_eig_density(experiment_folder, step, seed, device=None, num_da
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         criterion = get_criterion(cfgs.loc[exp_name])
         models_dict = get_models(curr_path, step, device=device)
+        if models_dict is None:
+            continue
+
         eig_density_dict[exp_name] = get_point_eig_density(models_dict, data, criterion, device=device, seed=seed)
 
         # cache data
@@ -342,6 +363,8 @@ def get_exp_linear_loss_trace(experiment_folder, step=-1, seed=0, device=None, n
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         loss_type = cfgs.loc[exp_name]["criterion"]
         models_dict = get_models(curr_path, step)
+        if models_dict is None:
+            continue
         results_dict[exp_name] = get_linear_loss_trace(models_dict, data, loss_type, device=device)
 
         # cache data
@@ -355,7 +378,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "MNIST"
-    exp = "Aug31_15-11-28_Daniels-MacBook-Pro-4.local"
+    exp = "Single_LeNet_cross_entropy"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -372,9 +395,17 @@ def main():
 
     
     print("Getting Point Traces.")
-    a = time.time()
     # get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
-    print(time.time() - a)
+    
+    # compute all point traces over time
+    f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
+    get_all_steps_f(experiment_folder, f)
+
+    # compute all loss over time 
+    f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=5000, test_datapoints=5000, device=device)
+    get_all_steps_f(experiment_folder, f)
+
+
     # print("Getting Point Density.")
     # get_exp_point_eig_density(experiment_folder, -1, 0, device, num_datapoints=1000, on_test_set=False, should_cache=True)
 
@@ -383,7 +414,7 @@ def main():
     # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
     # get_exp_trace(experiment_folder, -1, device=device)
 
-    get_exp_loss_acc(experiment_folder, -1, train_datapoints=5000, test_datapoints=5000, device=device)
+    # get_exp_loss_acc(experiment_folder, -1, train_datapoints=5000, test_datapoints=5000, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 

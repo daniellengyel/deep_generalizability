@@ -59,3 +59,11 @@ def get_ids_matching_config(config_to_id_map, config):
     return ids
 
 
+def get_all_steps_f(experiment_folder, f):
+    """f is meant to be a function of step and will compute metrics and other things solely dependend on the current step. """
+    all_steps = get_exp_steps(experiment_folder)
+    all_steps = np.array([list(v.keys()) for v in all_steps.values()]).reshape(-1)
+    all_steps = set(all_steps)
+
+    for step in all_steps:
+        f(step)

@@ -64,19 +64,19 @@ def get_linear_loss_trace(models, data, loss_type, device=None):
 
     for k, m in models.items():
 
-        outputs = get_model_outputs(m, data, softmax_outputs=True, device=device)
 
         if loss_type == "MSE":
-            correct_filter = get_correct_filter(m, data, is_binary_classification=True)
-            curr_results = 2 * (inputs_norm**2 + 1)
+            correct_filter = get_correct_filter(m, data, is_binary_classification=False)
+            curr_results = 2 * (inputs_norm**2 + 1) # no dependance on number of classes since we use reduction=mean
         elif loss_type == "BinaryExponentialLoss":
             curr_point_loss, correct_filter = point_loss_filters[k]
             curr_results = (inputs_norm**2 + 1) * curr_point_loss
         elif loss_type == "cross-entropy":
+            outputs = get_model_outputs(m, data, softmax_outputs=True, device=device)
             _, predicted = torch.max(outputs, 1)
             correct_filter = predicted == labels 
             correct_filter = correct_filter.detach().numpy()
-            curr_results = (inputs_norm**2 + 1) * (1 - torch.norm(outputs, dim=1)**2)
+            curr_results =  (inputs_norm**2 + 1)  * (1 - torch.norm(outputs, dim=1)**2)
         else:
             raise NotImplementedError("Loss type {} is not implemented.".format(loss_type))
 

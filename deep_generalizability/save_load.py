@@ -12,6 +12,12 @@ from .data_getters import *
 
 import pickle
 
+def get_exp_steps(experiment_folder):
+    exp_steps = {}
+    for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        exp_steps[exp_name] = get_all_steps(curr_path)
+    return exp_steps
+
 def get_all_steps(steps_dir):
     step_dict = {}
     for root, dirs, files in os.walk(steps_dir):
@@ -27,16 +33,10 @@ def get_models(model_folder_path, step, device=None):
     if step == -1:
         all_steps = get_all_steps(model_folder_path)
         step = int(max(all_steps.keys(), key=lambda x: int(x)))
-        # largest_step = -float("inf")
-        # for root, dirs, files in os.walk(model_folder_path):
-        #     for sample_step_dir in dirs:
-        #         name_split_underscore = sample_step_dir.split("_")
-        #         if len(name_split_underscore) == 1:
-        #             continue
-        #         largest_step = max(int(name_split_underscore[-1]), largest_step)
-        # step = largest_step
 
     model_path = os.path.join(model_folder_path, "step_{}".format(step))
+    if not os.path.exists(model_path):
+        return None
 
     models_dict = {}
     for root, dirs, files in os.walk(model_path):
