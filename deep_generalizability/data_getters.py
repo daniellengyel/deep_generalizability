@@ -28,6 +28,8 @@ def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=No
         train_data, test_data = _get_CIFAR10()
     elif data_name == "FashionMNIST":
         train_data, test_data = _get_FashionMNIST()
+    elif data_name == "ImageNet":
+        train_data, test_data = _get_ImageNet()
     else:
         raise NotImplementedError("{} is not implemented.".format(data_name))
     if reduce_train_per is not None:
@@ -83,6 +85,21 @@ def _get_FashionMNIST():
         ])
     )
     return train_data, test_data
+
+def _get_ImageNet():
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
+    transform = transforms.Compose(
+            [transforms.ToTensor(),
+            normalize])
+
+    train_data = torchvision.datasets.ImageNet(root=os.path.join(PATH_TO_DATA, "ImageNet"), train=True, 
+                                            download=True, transform=transform)
+    test_data = torchvision.datasets.ImageNet(root=os.path.join(PATH_TO_DATA, "ImageNet"), train=False,
+                                            download=True, transform=transform)
+    return train_data, test_data
+
 
 def _get_CIFAR10():
     transform = transforms.Compose(

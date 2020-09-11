@@ -20,6 +20,8 @@ from ..utils import *
 import itertools
 
 from scipy.stats import linregress
+from sklearn.neighbors import LocalOutlierFactor
+
 
 
 def get_end_stats(exp_folder, step=-1):
@@ -96,7 +98,7 @@ def get_end_stats(exp_folder, step=-1):
     return stats_pd
 
 
-def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds, save_location=None):
+def costum_plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds, save_location=None):
     if len(plots_names) > 1:
         plt.legend(tuple(plots),
                    plots_names,
@@ -105,12 +107,12 @@ def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bo
                    ncol=2,
                    )
     elif len(plots) > 1:
-        plt.legend(loc='upper right')
+        plt.legend(loc='best')
 
     config = {"axes.titlesize" : 24,
                 "axes.labelsize" : 22,
                 "lines.linewidth" : 3,
-                "lines.markersize" : 10,
+                "lines.markersize" : 5,
                 "xtick.labelsize" : 18,
                 "ytick.labelsize" : 18,
                 'grid.linestyle': 'dashed',
@@ -247,7 +249,7 @@ def hp_data_func_plot(experiment_folder, data_func, X_axis_name, Y_axis_name, pl
             else:
                 save_location = None
 
-            _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
+            costum_plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
                     save_location=save_location)
 
             plots = []
@@ -261,10 +263,24 @@ def hp_data_func_plot(experiment_folder, data_func, X_axis_name, Y_axis_name, pl
 
             plots, plots_names = data_func(exp_ids, plots, plots_names, comb)
 
+def get_outlier_filter(x_data, y_data):
+    combined_data = np.concatenate([x_data.reshape(len(x_data), 1), y_data.reshape(len(y_data), 1)], axis=1)
+    clf = LocalOutlierFactor(n_neighbors=2, contamination=0.01)
+    outlier_filter = clf.fit_predict(combined_data) == 1
+    return outlier_filter
+    
+def linregress_outliers(x_data, y_data):
+    x_data, y_data = np.array(x_data), np.array(y_data)
+    outlier_filter = get_outlier_filter(x_data, y_data)
+    x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
+    return linregress(x_data, y_data)
+
 def plot_regression(x_data, y_data):
     min_x = np.min(x_data)
     max_x = np.max(x_data)
-    slope, intercept, r_value, _, _ = linregress(x_data, y_data)
+
+    slope, intercept, r_value, _, _ = linregress_outliers(x_data, y_data)
+
     plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept])
     plot_name = "rvalue: {:.2f}".format(r_value)
     return plot_corr, plot_name
@@ -297,7 +313,6 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
 
             x_incorrect = np.concatenate(x_incorrect, axis=0)
             y_incorrect = np.concatenate(y_incorrect, axis=0)
-
 
             if len(x_correct) > 0:
                 plots.append(plt.scatter(x_correct.T, y_correct.T))

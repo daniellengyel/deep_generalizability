@@ -70,3 +70,31 @@ class LinearNet(Module):
     def forward(self, x):
         x = self.fc_layer(x)
         return x
+
+class BatchNormSimpleNet(Module):
+    def __init__(self, inp_dim, out_dim):
+        super(BatchNormSimpleNet, self).__init__()
+
+        width = 512
+
+        self.fc1 = nn.Linear(inp_dim, width)
+        self.bn1 = nn.BatchNorm1d(num_features=width)
+        self.fc2 = nn.Linear(width, width)
+        self.bn2 = nn.BatchNorm1d(num_features=width)
+        self.fc3 = nn.Linear(width, width)
+        self.bn3 = nn.BatchNorm1d(num_features=width)
+        self.fc4 = nn.Linear(width, width)
+        self.bn4 = nn.BatchNorm1d(num_features=width)
+        self.fc5 = nn.Linear(width, width)
+        self.bn5 = nn.BatchNorm1d(num_features=width)
+
+        self.fc_final = nn.Linear(width, out_dim)
+
+    def forward(self, x):
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = F.relu(self.bn2(self.fc2(x)))
+        x = F.relu(self.bn3(self.fc3(x)))
+        x = F.relu(self.bn4(self.fc4(x)))
+        x = F.relu(self.bn5(self.fc5(x)))
+        x = self.fc_final(x)
+        return x

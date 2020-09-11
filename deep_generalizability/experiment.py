@@ -60,13 +60,15 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "LeNet"
+config["net_name"] = "SimpleNet"
 
 if config["net_name"] == "SimpleNet":
     width = 256 # tune.grid_search([64])
-    num_layers = 2 #  tune.grid_search([16])
+    num_layers = 4 #  tune.grid_search([16])
     config["net_params"] = [inp_dim, out_dim, width, num_layers]
-if config["net_name"] == "LinearNet":
+elif config["net_name"] == "LinearNet":
+    config["net_params"] = [inp_dim, out_dim]
+elif config["net_name"] == "BatchNormSimpleNet":
     config["net_params"] = [inp_dim, out_dim]
 elif config["net_name"] == "LeNet":
     config["net_params"] = [height, width, num_channels, out_dim]
@@ -74,21 +76,21 @@ elif config["net_name"] == "LeNet":
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["learning_rate"] = 0.1 # tune.grid_search(list(np.linspace(0.1, 0.3, 10))) 
+config["learning_rate"] = 0.1 # tune.grid_search(list(np.logspace(-4, 0, 10))) 
 config["momentum"] = 0
 
-config["batch_train_size"] = tune.grid_search([16, 32, 256])
+config["batch_train_size"] = 256 # tune.grid_search([16, 32, 256])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy" # "cross-entropy"
 
-config["num_steps"] = 2500  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 50000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.01 # 0.15
 
 
 config["var_noise"] = None # tune.grid_search(list(np.logspace(-4, -1, 5)))
 
-config["save_model_freq"] = 250
+config["save_model_freq"] = 2500
 config["print_stat_freq"] = 100
 
 
@@ -100,7 +102,7 @@ print(folder_path)
 os.makedirs(folder_path)
 
 # --- get data ---
-train_data, test_data = get_data(data_name, vectorized=config["net_name"] in ["SimpleNet", "LinearNet"],
+train_data, test_data = get_data(data_name, vectorized=config["net_name"] in ["SimpleNet", "LinearNet", "BatchNormSimpleNet"],
                                  reduce_train_per=config["reduce_train_per"], seed=config["seed"], meta=config["data_meta"])
 
 if config["device"] == "gpu":
