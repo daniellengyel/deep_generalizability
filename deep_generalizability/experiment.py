@@ -60,7 +60,7 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "SimpleNet"
+config["net_name"] = "BatchNormSimpleNet"
 
 if config["net_name"] == "SimpleNet":
     width = 256 # tune.grid_search([64])
@@ -76,7 +76,7 @@ elif config["net_name"] == "LeNet":
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["learning_rate"] = 0.1 # tune.grid_search(list(np.logspace(-4, 0, 10))) 
+config["learning_rate"] = tune.grid_search(list(np.logspace(-4, 0, 10))) 
 config["momentum"] = 0
 
 config["batch_train_size"] = 256 # tune.grid_search([16, 32, 256])
@@ -84,7 +84,7 @@ config["batch_test_size"] = 16 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy" # "cross-entropy"
 
-config["num_steps"] = 50000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 10000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.01 # 0.15
 
 

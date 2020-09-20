@@ -237,6 +237,9 @@ def get_net_accuracy(net, data_loader, is_binary_classification=False, full_data
 
         if not full_dataset:
             break
+    print(total)
+    print(correct)
+    print(total - correct)
     return correct / float(total)
 
 

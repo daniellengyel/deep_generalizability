@@ -16,12 +16,18 @@ from .training_metrics import *
 from .utils import * 
 from ..nets import Nets
 from ..utils import *
+from .correlation import *
 
 import itertools
 
 from scipy.stats import linregress
 from sklearn.neighbors import LocalOutlierFactor
 
+
+COLORS = plt.cm.tab20(np.arange(20))
+
+CORRECT_COLOR_IDX = 3
+INCORRECT_COLOR_IDX = 1
 
 
 def get_end_stats(exp_folder, step=-1):
@@ -134,12 +140,12 @@ def costum_plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_a
     if Y_axis_bounds is not None:
         plt.ylim(Y_axis_bounds)
 
-    color_selector = np.arange(12)
-    color_selector[0] = 3
-    color_selector[1] = 1
-    color_selector[3] = 0
-    color = plt.cm.tab20(color_selector)
-    mpl.rcParams['axes.prop_cycle'] = cycler('color', color) # plt.cm.Set3(np.arange(12))))
+    # color_selector = np.arange(12)
+    # color_selector[0] = 3
+    # color_selector[1] = 1
+    # color_selector[3] = 0
+    # color = plt.cm.tab20(color_selector)
+    # mpl.rcParams['axes.prop_cycle'] = cycler('color', color) # plt.cm.Set3(np.arange(12))))
     if save_location is not None:
         plt.savefig(save_location + ".png")#, format='eps')
     plt.show()
@@ -263,25 +269,16 @@ def hp_data_func_plot(experiment_folder, data_func, X_axis_name, Y_axis_name, pl
 
             plots, plots_names = data_func(exp_ids, plots, plots_names, comb)
 
-def get_outlier_filter(x_data, y_data):
-    combined_data = np.concatenate([x_data.reshape(len(x_data), 1), y_data.reshape(len(y_data), 1)], axis=1)
-    clf = LocalOutlierFactor(n_neighbors=2, contamination=0.01)
-    outlier_filter = clf.fit_predict(combined_data) == 1
-    return outlier_filter
-    
-def linregress_outliers(x_data, y_data):
-    x_data, y_data = np.array(x_data), np.array(y_data)
-    outlier_filter = get_outlier_filter(x_data, y_data)
-    x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
-    return linregress(x_data, y_data)
-
-def plot_regression(x_data, y_data):
+def plot_regression(x_data, y_data, color):
     min_x = np.min(x_data)
     max_x = np.max(x_data)
 
     slope, intercept, r_value, _, _ = linregress_outliers(x_data, y_data)
+    outlier_filter = get_outlier_filter(x_data, y_data)
 
-    plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept])
+    plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept], color=color)
+    plt.scatter(x_data[~outlier_filter], y_data[~outlier_filter], color=color, marker="x", s=120)
+
     plot_name = "rvalue: {:.2f}".format(r_value)
     return plot_corr, plot_name
 
@@ -315,21 +312,22 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
             y_incorrect = np.concatenate(y_incorrect, axis=0)
 
             if len(x_correct) > 0:
-                plots.append(plt.scatter(x_correct.T, y_correct.T))
+                plots.append(plt.scatter(x_correct.T, y_correct.T, color=COLORS[CORRECT_COLOR_IDX]))
                 plots_names.append("Correct")
 
                 if draw_correlation:
-                    plot_corr, plot_name = plot_regression(x_correct, y_correct)
+                    plot_corr, plot_name = plot_regression(x_correct, y_correct, color=COLORS[CORRECT_COLOR_IDX])
                     plots.append(plot_corr)
                     plots_names.append("Correct, {}".format(plot_name))
 
-                    plot_corr, plot_name = plot_regression(x_incorrect, y_incorrect)
+            if len(x_incorrect) > 0:
+                plots.append(plt.scatter(x_incorrect.T, y_incorrect.T, color=COLORS[INCORRECT_COLOR_IDX]))
+                plots_names.append("Incorrect")
+
+                if draw_correlation:
+                    plot_corr, plot_name = plot_regression(x_incorrect, y_incorrect, color=COLORS[INCORRECT_COLOR_IDX])
                     plots.append(plot_corr)
                     plots_names.append("Incorrect, {}".format(plot_name))
-
-            if len(x_incorrect) > 0:
-                plots.append(plt.scatter(x_incorrect.T, y_incorrect.T))
-                plots_names.append("Incorrect")
         else:
             x_data = np.concatenate(x_correct, axis=0)
             y_data = np.concatenate(y_correct, axis=0)
@@ -337,11 +335,11 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
             min_x = 0 #np.min(np.min(x_data), np.min(x_data))
             max_x = max(np.max(x_data), np.max(x_data))
             
-            plots.append(plt.scatter(x_data.T, y_data.T))
+            plots.append(plt.scatter(x_data.T, y_data.T, color=COLORS[CORRECT_COLOR_IDX]))
             plots_names.append("All, {}".format(comb))
 
             if draw_correlation:
-                plot_corr, plot_name = plot_regression(x_data, y_data)
+                plot_corr, plot_name = plot_regression(x_data, y_data, color=COLORS[CORRECT_COLOR_IDX])
                 plots.append(plot_corr)
                 plots_names.append(plot_name)
         
