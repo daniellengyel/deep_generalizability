@@ -18,12 +18,16 @@ import torch
 import pickle
 
 def get_data_for_experiment(experiment_path):
+    all_nets = ["SimpleNet", "LinearNet", "BatchNormSimpleNet", "KeskarC3", "LeNet"]
+    
     cfs = load_configs(experiment_path)
     if "data_name" in cfs.iloc[0]:
         data_name = cfs.iloc[0]["data_name"]
     else:
         data_name = experiment_path.split("/")[-2]
-    vectorized = cfs.iloc[0]["net_name"] in ["SimpleNet", "LinearNet"]
+
+    assert cfs.iloc[0]["net_name"] in all_nets
+    vectorized = cfs.iloc[0]["net_name"] in ["SimpleNet", "LinearNet", "BatchNormSimpleNet"]
     reduce_train_per = cfs.iloc[0]["reduce_train_per"]
     seed = cfs.iloc[0]["seed"]
     meta = cfs.iloc[0]["data_meta"]
@@ -378,7 +382,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "CIFAR10"
-    exp = "Sep12_00-19-09_Daniels-MacBook-Pro-4.local"
+    exp = "large_BatchSimple"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -395,15 +399,15 @@ def main():
 
     
     print("Getting Point Traces.")
-    # get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
+    get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
     
-    # # compute all point traces over time
-    # f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
-    # get_all_steps_f(experiment_folder, f)
+    # compute all point traces over time
+    f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
+    get_all_steps_f(experiment_folder, f)
 
-    # # # compute all loss over time 
-    # f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=5000, test_datapoints=5000, device=device)
-    # get_all_steps_f(experiment_folder, f)
+    # # compute all loss over time 
+    f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=1000, test_datapoints=1000, device=device)
+    get_all_steps_f(experiment_folder, f)
 
 
     # print("Getting Point Density.")
@@ -414,7 +418,7 @@ def main():
     # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
     # get_exp_trace(experiment_folder, -1, device=device)
 
-    get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
+    # get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 

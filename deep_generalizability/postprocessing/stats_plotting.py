@@ -30,7 +30,7 @@ CORRECT_COLOR_IDX = 3
 INCORRECT_COLOR_IDX = 1
 
 
-def get_end_stats(exp_folder, step=-1):
+def get_end_stats(exp_folder, step=-1, with_min_max=False):
     
     runs, _ = load_cached_data(exp_folder, "runs")
     trace, _ = load_cached_data(exp_folder, "trace", step=step) # assume the trace i get is from the end.
@@ -53,48 +53,56 @@ def get_end_stats(exp_folder, step=-1):
             Loss_test_list = [loss[exp_id][str(nn)][1] for nn in range(num_nets)]
 
             stats_dict[str(exp_id)]["Loss Test Mean"] = np.mean(Loss_test_list)
-            stats_dict[str(exp_id)]["Loss Test Max"] = np.max(Loss_test_list)
-            stats_dict[str(exp_id)]["Loss Test Min"] = np.min(Loss_test_list)
-
             stats_dict[str(exp_id)]["Loss Train Mean"] = np.mean(Loss_train_list)
-            stats_dict[str(exp_id)]["Loss Train Max"] = np.max(Loss_train_list)
-            stats_dict[str(exp_id)]["Loss Train Min"] = np.min(Loss_train_list)
+
+            if with_min_max:
+                stats_dict[str(exp_id)]["Loss Test Max"] = np.max(Loss_test_list)
+                stats_dict[str(exp_id)]["Loss Test Min"] = np.min(Loss_test_list)
+                stats_dict[str(exp_id)]["Loss Train Max"] = np.max(Loss_train_list)
+                stats_dict[str(exp_id)]["Loss Train Min"] = np.min(Loss_train_list)
 
         if acc is not None:
             Acc_train_list = [acc[exp_id][str(nn)][0] for nn in range(num_nets)]
             Acc_test_list = [acc[exp_id][str(nn)][1] for nn in range(num_nets)]
 
             stats_dict[str(exp_id)]["Acc Train Mean"] = np.mean(Acc_train_list)
-            stats_dict[str(exp_id)]["Acc Train Max"] = np.max(Acc_train_list)
-            stats_dict[str(exp_id)]["Acc Train Min"] = np.min(Acc_train_list)
-
             stats_dict[str(exp_id)]["Acc Test Mean"] = np.mean(Acc_test_list)
-            stats_dict[str(exp_id)]["Acc Test Max"] = np.max(Acc_test_list)
-            stats_dict[str(exp_id)]["Acc Test Min"] = np.min(Acc_test_list)
+            
+            if  with_min_max:
+                stats_dict[str(exp_id)]["Acc Train Max"] = np.max(Acc_train_list)
+                stats_dict[str(exp_id)]["Acc Train Min"] = np.min(Acc_train_list)
+                stats_dict[str(exp_id)]["Acc Test Max"] = np.max(Acc_test_list)
+                stats_dict[str(exp_id)]["Acc Test Min"] = np.min(Acc_test_list)
 
             stats_dict[str(exp_id)]["Acc Gap Mean"] = stats_dict[str(exp_id)]["Acc Test Mean"] - \
                                                     stats_dict[str(exp_id)]["Acc Train Mean"]
 
         if dist is not None:
             stats_dict[str(exp_id)]["Dist Mean"] = np.mean(dist[exp_id])
-            stats_dict[str(exp_id)]["Dist Max"] = np.max(dist[exp_id])
-            stats_dict[str(exp_id)]["Dist Min"] = np.min(dist[exp_id])
+
+            if with_min_max:
+                stats_dict[str(exp_id)]["Dist Max"] = np.max(dist[exp_id])
+                stats_dict[str(exp_id)]["Dist Min"] = np.min(dist[exp_id])
         
         if runs is not None:
             norm_list = np.array([runs[exp_id][num_steps]["Norm"]["net"][str(nn)] for nn in range(num_nets)])
-            stats_dict[str(exp_id)]["Norm Mean"] = np.mean(norm_list)
-            stats_dict[str(exp_id)]["Norm Max"] = np.max(norm_list)
-            stats_dict[str(exp_id)]["Norm Min"] = np.min(norm_list)
+            stats_dict[str(exp_id)]['Norm Mean'] = 0 # np.mean(norm_list)
+
+            if with_min_max:
+                stats_dict[str(exp_id)]["Norm Max"] = np.max(norm_list)
+                stats_dict[str(exp_id)]["Norm Min"] = np.min(norm_list)
 
         if trace is not None:
             Trace_list = [np.mean(trace[exp_id][str(nn)]) for nn in range(num_nets)]
             Trace_std_list = [np.std(trace[exp_id][str(nn)]) for nn in range(num_nets)]
             stats_dict[str(exp_id)]["Trace Mean"] = np.mean(Trace_list)
             stats_dict[str(exp_id)]["Trace Mean Std"] = np.mean(Trace_std_list)
-            stats_dict[str(exp_id)]["Trace Max"] = np.max(Trace_list)
-            stats_dict[str(exp_id)]["Trace Min"] = np.min(Trace_list)
 
-    stats_pd = pd.DataFrame(stats_dict).T
+            if with_min_max:
+                stats_dict[str(exp_id)]["Trace Max"] = np.max(Trace_list)
+                stats_dict[str(exp_id)]["Trace Min"] = np.min(Trace_list)
+
+    stats_pd = pd.DataFrame.from_dict(stats_dict, orient="index")
 
     # append hyperparameters to DataFrame
     cfs_hp = get_hp(configs)

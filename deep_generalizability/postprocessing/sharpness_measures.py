@@ -15,7 +15,7 @@ import yaml, os, sys, re, time
 from ..pyhessian import hessian
 
 import torch
-from hessian_eigenthings import compute_hessian_eigenthings
+# from hessian_eigenthings import compute_hessian_eigenthings
 
 import pickle
 
@@ -103,36 +103,36 @@ def get_point_eig_density(models, data, criterion, device=None, seed=None):
         eig_density[k] = curr_eig_density
     return eig_density
 
-# get eigenvalues of specific model folder.
-def get_models_eig(models, train_loader, test_loader, criterion, num_eigenthings=5, full_dataset=True, device=None, only_vals=True, seed=None):
-    set_seed(seed)
+# # get eigenvalues of specific model folder.
+# def get_models_eig(models, train_loader, test_loader, criterion, num_eigenthings=5, full_dataset=True, device=None, only_vals=True, seed=None):
+#     set_seed(seed)
 
-    eig_dict = {}
-    # get eigenvals
-    for k, m in models.items():
-        print(k)
-        if device is not  None:
-            m = m.to(device)
-            is_gpu = True
-        else:
-            is_gpu = False
+#     eig_dict = {}
+#     # get eigenvals
+#     for k, m in models.items():
+#         print(k)
+#         if device is not  None:
+#             m = m.to(device)
+#             is_gpu = True
+#         else:
+#             is_gpu = False
 
-        eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-                                                           criterion, num_eigenthings, use_gpu=is_gpu,
-                                                           full_dataset=full_dataset, mode="lanczos",
-                                                           max_steps=100, tol=1e-2)
-        try:
-            #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-            #                                                        criterion, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
-            #                                                        max_steps=50)
-            if only_vals:
-                eig_dict[k] = eigenvals
-            else:
-                eig_dict[k] = (eigenvals, eigenvecs)
-        except:
-            print("Error for net {}.".format(k))
+#         eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
+#                                                            criterion, num_eigenthings, use_gpu=is_gpu,
+#                                                            full_dataset=full_dataset, mode="lanczos",
+#                                                            max_steps=100, tol=1e-2)
+#         try:
+#             #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
+#             #                                                        criterion, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
+#             #                                                        max_steps=50)
+#             if only_vals:
+#                 eig_dict[k] = eigenvals
+#             else:
+#                 eig_dict[k] = (eigenvals, eigenvecs)
+#         except:
+#             print("Error for net {}.".format(k))
 
-    return eig_dict
+#     return eig_dict
 
 
 

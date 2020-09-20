@@ -60,7 +60,7 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "BatchNormSimpleNet"
+config["net_name"] = "KeskarC3"
 
 if config["net_name"] == "SimpleNet":
     width = 256 # tune.grid_search([64])
@@ -72,11 +72,13 @@ elif config["net_name"] == "BatchNormSimpleNet":
     config["net_params"] = [inp_dim, out_dim]
 elif config["net_name"] == "LeNet":
     config["net_params"] = [height, width, num_channels, out_dim]
+elif config["net_name"] == "KeskarC3":
+    config["net_params"] = [height, width, num_channels, out_dim]
 
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["learning_rate"] = tune.grid_search(list(np.logspace(-4, 0, 10))) 
+config["learning_rate"] = 0.36 # tune.grid_search(list(np.logspace(-4, 0, 10))) 
 config["momentum"] = 0
 
 config["batch_train_size"] = 256 # tune.grid_search([16, 32, 256])
@@ -90,7 +92,7 @@ config["mean_loss_threshold"] = None # 0.01 # 0.15
 
 config["var_noise"] = None # tune.grid_search(list(np.logspace(-4, -1, 5)))
 
-config["save_model_freq"] = 2500
+config["save_model_freq"] = 500
 config["print_stat_freq"] = 100
 
 

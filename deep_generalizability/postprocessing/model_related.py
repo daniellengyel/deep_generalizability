@@ -14,7 +14,6 @@ from ..training_utils import get_criterion
 import yaml, os, sys, re
 
 import torch
-from hessian_eigenthings import compute_hessian_eigenthings
 
 import pickle
 

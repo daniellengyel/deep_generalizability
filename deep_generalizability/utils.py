@@ -252,7 +252,6 @@ def get_net_loss(net, data_loader, criterion, full_dataset=False, device=None):
                 torch.cuda.LongTensor)
         else:
             inputs = inputs.float()
-
         outputs = net(inputs)
         loss_sum += float(criterion(outputs, labels))
         if not full_dataset:

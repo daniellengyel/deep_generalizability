@@ -20,6 +20,8 @@ def get_nets(net_name, net_params, num_nets, device=None):
         nets = [LinearNet(*net_params) for _ in range(num_nets)]
     elif net_name == "BatchNormSimpleNet":
         nets = [BatchNormSimpleNet(*net_params) for _ in range(num_nets)]
+    elif net_name == "KeskarC3":
+        nets = [KeskarC3(*net_params) for _ in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(net_name))
     if device is not None:
