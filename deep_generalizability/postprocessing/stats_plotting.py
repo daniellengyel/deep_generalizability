@@ -8,6 +8,7 @@ from cycler import cycler
 import torch
 from torch.utils.data import DataLoader
 import sys
+import scipy
 
 import re
 
@@ -24,10 +25,12 @@ from scipy.stats import linregress
 from sklearn.neighbors import LocalOutlierFactor
 
 
+import seaborn as sns
+
 COLORS = plt.cm.tab20(np.arange(20))
 
-CORRECT_COLOR_IDX = 3
-INCORRECT_COLOR_IDX = 1
+CORRECT_COLOR_IDX = 1
+INCORRECT_COLOR_IDX = 3
 
 
 def get_end_stats(exp_folder, step=-1, with_min_max=False):
@@ -137,7 +140,7 @@ def costum_plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_a
     plt.rcParams.update(config) 
 
     plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams["figure.figsize"] = (13,9)
+    plt.rcParams["figure.figsize"] = (14,8)
 
 
     plt.xlabel(X_axis_name, )
@@ -155,7 +158,7 @@ def costum_plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_a
     # color = plt.cm.tab20(color_selector)
     # mpl.rcParams['axes.prop_cycle'] = cycler('color', color) # plt.cm.Set3(np.arange(12))))
     if save_location is not None:
-        plt.savefig(save_location + ".png")#, format='eps')
+        plt.savefig(save_location + ".png", dpi=300, bbox_inches = "tight", )#, format='eps')
     plt.show()
 
 
@@ -277,15 +280,18 @@ def hp_data_func_plot(experiment_folder, data_func, X_axis_name, Y_axis_name, pl
 
             plots, plots_names = data_func(exp_ids, plots, plots_names, comb)
 
-def plot_regression(x_data, y_data, color):
+def plot_regression(x_data, y_data, color, remove_outliers=True):
     min_x = np.min(x_data)
     max_x = np.max(x_data)
 
-    slope, intercept, r_value, _, _ = linregress_outliers(x_data, y_data)
-    outlier_filter = get_outlier_filter(x_data, y_data)
+    slope, intercept, r_value, _, _ = linregress_outliers(x_data, y_data, remove_outliers=remove_outliers)
 
+    
     plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept], color=color)
-    plt.scatter(x_data[~outlier_filter], y_data[~outlier_filter], color=color, marker="x", s=120)
+    
+    if remove_outliers:
+        outlier_filter = get_outlier_filter(x_data, y_data)
+        plt.scatter(x_data[~outlier_filter], y_data[~outlier_filter], color=color, marker="x", s=120)
 
     plot_name = "rvalue: {:.2f}".format(r_value)
     return plot_corr, plot_name
@@ -306,6 +312,7 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
                 if use_correct_filter:
                     x_correct.append(curr_point_margins[correct_filters])
                     y_correct.append(curr_point_traces[correct_filters])
+                    print(np.mean(curr_point_traces[correct_filters]))
 
                     x_incorrect.append(curr_point_margins[~correct_filters])
                     y_incorrect.append(curr_point_traces[~correct_filters])
@@ -355,7 +362,7 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
         
     return xy_func
 
-def margins_correct_incorrect_hist_plot(margins_filters, correct_filter=False):
+def margins_correct_incorrect_hist_plot(margins_filters, use_correct_filter=False):
     def xy_func(exp_ids, plots, plots_names, comb):
         x_correct = []
         x_incorrect = []
@@ -364,13 +371,13 @@ def margins_correct_incorrect_hist_plot(margins_filters, correct_filter=False):
             for model_idx in margins_filters[exp_id].keys():
 
                 margins, correct_filters = margins_filters[exp_id][model_idx]
-                if correct_filter:
+                if use_correct_filter:
                     x_correct.append(margins[correct_filters])
                     x_incorrect.append(margins[~correct_filters])
                 else:
                     x_correct.append(margins)
                     
-        if correct_filter:
+        if use_correct_filter:
             x_correct = np.concatenate(x_correct, axis=0)
             x_incorrect = np.concatenate(x_incorrect, axis=0)
         
@@ -382,6 +389,48 @@ def margins_correct_incorrect_hist_plot(margins_filters, correct_filter=False):
         else:
             x_data = np.concatenate(x_correct, axis=0)
             plots.append(plt.hist(x_data, bins=100, histtype='step', label=comb))
+
+        return plots, plots_names
+        
+    return xy_func
+
+
+def margins_correct_incorrect_box_plot(margins_filters, use_correct_filter=False):
+    pos_idx = 2
+    def xy_func(exp_ids, plots, plots_names, comb):
+        nonlocal pos_idx
+
+        x_correct = []
+        x_incorrect = []
+        
+        for exp_id in exp_ids:
+            for model_idx in margins_filters[exp_id].keys():
+
+                margins, correct_filters = margins_filters[exp_id][model_idx]
+                if use_correct_filter:
+                    x_correct.append(margins[correct_filters])
+                    x_incorrect.append(margins[~correct_filters])
+                else:
+                    x_correct.append(margins)
+                    
+        if use_correct_filter:
+            x_correct = np.concatenate(x_correct, axis=0)
+            x_incorrect = np.concatenate(x_incorrect, axis=0)
+        
+            if len(x_correct) > 0:
+                plots.append(plt.boxplot(x_correct, positions=[pos_idx], labels=["Correct, {}".format(comb)], vert=False))
+                pos_idx += 1
+                
+            if len(x_incorrect) > 0:
+                plots.append(plt.boxplot(x_incorrect, positions=[pos_idx], labels=["Incorrect, {}".format(comb)], vert=False))
+                pos_idx += 1
+
+        else:
+            x_data = np.concatenate(x_correct, axis=0)
+            skewness = scipy.stats.moment(x_data, moment=3)
+            plots.append(plt.boxplot(x_data, positions=[pos_idx], labels=["Batch Size: {}, Skewness: {:.2f}".format(comb[0], skewness)], vert=False))
+            pos_idx -= 1
+
 
         return plots, plots_names
         

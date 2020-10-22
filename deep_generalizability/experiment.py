@@ -18,7 +18,7 @@ config["seed"] = 0
 config["device"] = "cpu"
 
 # data specific
-data_name = "CIFAR10"
+data_name = "MNIST"
 
 if data_name == "CIFAR10":
     num_channels = 3
@@ -60,7 +60,7 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "KeskarC3"
+config["net_name"] = "LinearNet"
 
 if config["net_name"] == "SimpleNet":
     width = 256 # tune.grid_search([64])
@@ -81,12 +81,12 @@ config["optimizer"] = "SGD" # "Adam"
 config["learning_rate"] = 0.36 # tune.grid_search(list(np.logspace(-4, 0, 10))) 
 config["momentum"] = 0
 
-config["batch_train_size"] = 256 # tune.grid_search([16, 32, 256])
+config["batch_train_size"] = tune.grid_search([256, 4096])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy" # "cross-entropy"
 
-config["num_steps"] = 10000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 1  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.01 # 0.15
 
 

@@ -243,7 +243,7 @@ def get_exp_point_loss(experiment_folder, step=-1, seed=0, device=None, num_data
 
     return results_dict
 
-def get_exp_margins(experiment_folder, softmax_outputs=False, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
+def get_exp_margins(experiment_folder, get_upperbound=False, softmax_outputs=False, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
     margins_dict = {}
     meta_dict = {"seed": seed}
 
@@ -260,8 +260,9 @@ def get_exp_margins(experiment_folder, softmax_outputs=False, step=-1, seed=0, d
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
             continue
-        margins_dict[exp_name] = get_margins_filters(models_dict, data, device=device, softmax_outputs=softmax_outputs, seed=seed)
-
+        a = time.time()
+        margins_dict[exp_name] = get_margins_filters(models_dict, data, device=device, get_upperbound=get_upperbound, softmax_outputs=softmax_outputs, seed=seed)
+        print(time.time() - a)
         # cache data
         if should_cache:
             cache_data(experiment_folder, "margins", margins_dict, meta_dict, step=step)
@@ -287,8 +288,9 @@ def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoi
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
             continue
+        a = time.time()
         traces_dict[exp_name] = get_point_traces(models_dict, data, criterion, device=device, seed=seed)
-
+        print(time.time() - a)
         # cache data
         if should_cache:
             cache_data(experiment_folder, "point_traces", traces_dict, meta_dict, step=step)
@@ -382,7 +384,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "CIFAR10"
-    exp = "large_BatchSimple"
+    exp = "Large_Single_LeNet_cross-entropy copy"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -394,20 +396,20 @@ def main():
         device = None
         # device = torch.device("cpu")
 
-    get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
-                             "Trace", "Gradient"])  # TODO does not find acc and var
+    # get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
+    #                          "Trace", "Gradient"])  # TODO does not find acc and var
 
     
-    print("Getting Point Traces.")
+    # print("Getting Point Traces.")
     get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
     
     # compute all point traces over time
-    f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
-    get_all_steps_f(experiment_folder, f)
+    # f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
+    # get_all_steps_f(experiment_folder, f)
 
     # # compute all loss over time 
-    f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=1000, test_datapoints=1000, device=device)
-    get_all_steps_f(experiment_folder, f)
+    # f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=1000, test_datapoints=1000, device=device)
+    # get_all_steps_f(experiment_folder, f)
 
 
     # print("Getting Point Density.")

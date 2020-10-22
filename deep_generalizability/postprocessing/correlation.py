@@ -22,15 +22,23 @@ from scipy.stats import linregress
 from sklearn.neighbors import LocalOutlierFactor
 
 def get_outlier_filter(x_data, y_data):
+    n_neighbors = 3
+    if len(x_data) < 5:
+        return np.array([True]*len(x_data)) # They are all outliers since we don't have enough datapoints
     combined_data = np.concatenate([x_data.reshape(len(x_data), 1), y_data.reshape(len(y_data), 1)], axis=1)
-    clf = LocalOutlierFactor(n_neighbors=10, contamination=0.025)
+    clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.05)
     outlier_filter = clf.fit_predict(combined_data) == 1
     return outlier_filter
     
-def linregress_outliers(x_data, y_data):
+def linregress_outliers(x_data, y_data, remove_outliers=True):
+    if len(x_data) == 0:
+        return 0, 0, 0, None, None
     x_data, y_data = np.array(x_data), np.array(y_data)
-    outlier_filter = get_outlier_filter(x_data, y_data)
-    x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
+
+    if remove_outliers:
+        outlier_filter = get_outlier_filter(x_data, y_data)
+        x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
+
     return linregress(x_data, y_data)
 
 def get_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_filter):
@@ -44,7 +52,8 @@ def get_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_fil
     res_dict = {}
     
     for step in all_steps:
-
+        print(step)
+   
         X_data_filter = X_data_filter_f(step)
         Y_data = Y_data_f(step)
         
@@ -68,6 +77,7 @@ def get_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_fil
                 if use_correct_filter:
                     slope, intercept, correct_r_value, _, _ = linregress_outliers(curr_X_data[correct_filter], curr_Y_data[correct_filter])
                     res_dict[exp_id][model_idx]["correct_r_value"][step] = correct_r_value
+                    print(slope)
 
                     slope, intercept, incorrect_r_value, _, _ = linregress_outliers(curr_X_data[~correct_filter], curr_Y_data[~correct_filter])
                     res_dict[exp_id][model_idx]["incorrect_r_value"][step] = incorrect_r_value

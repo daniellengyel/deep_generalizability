@@ -19,7 +19,6 @@ from ..postprocessing.stats_plotting import *
 from ..data_getters import *
 
 
-
 def entropy(probs):
     return - np.sum([p * np.log(p) for p in probs])
 
@@ -76,7 +75,7 @@ def get_linear_loss_trace(models, data, loss_type, device=None):
             _, predicted = torch.max(outputs, 1)
             correct_filter = predicted == labels 
             correct_filter = correct_filter.detach().numpy()
-            curr_results =  (inputs_norm**2 + 1)  * (1 - torch.norm(outputs, dim=1)**2)
+            curr_results =  (inputs_norm**2 + 1) * (1 - torch.norm(outputs, dim=1)**2)
         else:
             raise NotImplementedError("Loss type {} is not implemented.".format(loss_type))
 
@@ -88,7 +87,7 @@ def get_linear_loss_trace(models, data, loss_type, device=None):
     
     
 
-def get_margins_filters(models, data, device=None, softmax_outputs=False, seed=None):
+def get_margins_filters(models, data, device=None, get_upperbound=False, softmax_outputs=False, seed=None):
     set_seed(seed)
 
     margins_filters = {}
@@ -101,7 +100,7 @@ def get_margins_filters(models, data, device=None, softmax_outputs=False, seed=N
 
     for k, m in models.items():
 
-        outputs = get_model_outputs(m, data, softmax_outputs=False, device=device)
+        outputs = get_model_outputs(m, data, softmax_outputs=softmax_outputs, device=device)
         _, predicted = torch.max(outputs, 1)
         correct_filter = predicted == labels 
 
@@ -114,13 +113,13 @@ def get_margins_filters(models, data, device=None, softmax_outputs=False, seed=N
         curr_margins[~correct_filter] = second_largest[0][:, 0][~correct_filter] - torch.Tensor(take_slice(outputs, labels))[~correct_filter]
         
         curr_margins = curr_margins.detach().numpy()
+        if get_upperbound:
+            curr_margins = 1 - curr_margins**2
         correct_filter = correct_filter.detach().numpy()
         
         margins_filters[k] = (curr_margins, correct_filter)
     return margins_filters
     
-
-
 
 def cutoffs(m1, m2, t1, t2):
     print("Trace sum first: {}".format(np.sum(t1)))
