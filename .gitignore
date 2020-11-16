@@ -1,4 +1,5 @@
+DS_Store/
 .env/
 playground/
-deep_generalizability/experiments/
-deep_generalizability/data/
+experiments/
+data/
