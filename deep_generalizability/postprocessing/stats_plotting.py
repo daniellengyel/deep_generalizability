@@ -29,14 +29,14 @@ import seaborn as sns
 
 COLORS = plt.cm.tab20(np.arange(20))
 
-CORRECT_COLOR_IDX = 1
-INCORRECT_COLOR_IDX = 3
+CORRECT_COLOR_IDX = 3
+INCORRECT_COLOR_IDX = 1
 
 
 def get_end_stats(exp_folder, step=-1, with_min_max=False):
     
     runs, _ = load_cached_data(exp_folder, "runs")
-    trace, _ = load_cached_data(exp_folder, "trace", step=step) # assume the trace i get is from the end.
+    trace, _ = load_cached_data(exp_folder, "point_traces", step=step) # assume the trace i get is from the end.
     acc, _ = load_cached_data(exp_folder, "acc", step=step)
     loss, _ = load_cached_data(exp_folder, "loss", step=step)
     dist, _ = load_cached_data(exp_folder, "dist")
@@ -304,6 +304,7 @@ def margin_trace_correct_incorrect_plot(margins_filters, point_traces, use_corre
 
         x_incorrect = []
         y_incorrect = []
+        print(exp_ids)
         for exp_id in exp_ids:
             for model_idx in margins_filters[exp_id].keys():
 

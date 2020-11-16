@@ -47,10 +47,10 @@ def get_criterion(config=None, loss_type=None, device=None):
     if loss_type is None:
         loss_type = config["criterion"]
     if loss_type == "MSE":
-        one_hot = torch.eye(outputs.shape[1])[labels]
-        if device is not None:
-            one_hot = one_hot.to(device).type(torch.cuda.FloatTensor)
-        return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs, one_hot) # torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
+        # one_hot = torch.eye(outputs.shape[1])[labels]
+        # if device is not None:
+        #     one_hot = one_hot.to(device).type(torch.cuda.FloatTensor)
+        return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs, torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
     elif loss_type == "cross-entropy":
         return torch.nn.CrossEntropyLoss()
     elif loss_type == "MultiMarginLoss":

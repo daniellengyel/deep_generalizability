@@ -179,12 +179,6 @@ def training_step(net, iter_data_loader, optimizer, criterion, var_noise=None, w
         writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
         writer.add_scalar('Gradient/train/net_{}'.format(idx_net), curr_grad, curr_step)
         writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
-        # if (curr_step % 50) == 0:
-        #     # a = time.time()
-        #     is_gpu = device is not None
-        #     trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=is_gpu).trace())
-        #     writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
-        #     # print("Getting trace took {}".format(time.time() - a))
 
 
     assert took_step or (idx_net == 0)

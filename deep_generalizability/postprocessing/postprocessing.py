@@ -269,16 +269,23 @@ def get_exp_margins(experiment_folder, get_upperbound=False, softmax_outputs=Fal
 
     return margins_dict
 
+STORED_DATA = None
+
 def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoints=1000, on_test_set=False, should_cache=False):
+    global STORED_DATA
     traces_dict = {}
     meta_dict = {"seed": seed}
 
     # get data
-    train_data, test_data = get_data_for_experiment(experiment_folder)
-    if on_test_set:
-        data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
+    if STORED_DATA is None:
+        train_data, test_data = get_data_for_experiment(experiment_folder)
+        if on_test_set:
+            data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
+        else:
+            data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
+        STORED_DATA = data 
     else:
-        data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
+        data = STORED_DATA
 
     cfgs = load_configs(experiment_folder)
 
@@ -288,6 +295,10 @@ def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoi
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
             continue
+
+        # if exp_name != "1605478459.1644921":
+        #     continue
+
         a = time.time()
         traces_dict[exp_name] = get_point_traces(models_dict, data, criterion, device=device, seed=seed)
         print(time.time() - a)
@@ -379,12 +390,38 @@ def get_exp_linear_loss_trace(experiment_folder, step=-1, seed=0, device=None, n
 
     return results_dict
 
+def get_exp_inp_out_jacobian(experiment_folder, step=-1, seed=0, device=None, num_datapoints=50, on_test_set=False, should_cache=False):
+    results_dict = {}
+    meta_dict = {"seed": seed}
+    cfgs = load_configs(experiment_folder)
+
+    # get data
+    train_data, test_data = get_data_for_experiment(experiment_folder)
+    if on_test_set:
+        data = get_random_data_subset(test_data, num_datapoints=num_datapoints, seed=seed)
+    else:
+        data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
+
+    # iterate through models
+    for exp_name, curr_path in exp_models_path_generator(experiment_folder):
+        loss_type = cfgs.loc[exp_name]["criterion"]
+        models_dict = get_models(curr_path, step, device)
+        if models_dict is None:
+            continue
+        results_dict[exp_name] = get_inp_out_jacobian(models_dict, data, loss_type, device=device)
+
+        # cache data
+        if should_cache:
+            cache_data(experiment_folder, "inp_out_jacobian".format(loss_type), results_dict, meta_dict, step=step)
+
+    return results_dict
+
 def main():
     # # # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "CIFAR10"
-    exp = "Large_Single_LeNet_cross-entropy copy"
+    exp = "LongLong_MSE_Simple"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -401,13 +438,16 @@ def main():
 
     
     # print("Getting Point Traces.")
-    get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
+    # get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
     
-    # compute all point traces over time
-    # f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=1000, on_test_set=False, should_cache=True)
-    # get_all_steps_f(experiment_folder, f)
+    # get_exp_inp_out_jacobian(experiment_folder, step=-1, seed=0, device=device, num_datapoints=10, on_test_set=False, should_cache=True)
 
-    # # compute all loss over time 
+
+    # compute all point traces over time
+    f = lambda step: get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
+    get_all_steps_f(experiment_folder, f)
+
+    # compute all loss over time 
     # f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=1000, test_datapoints=1000, device=device)
     # get_all_steps_f(experiment_folder, f)
 

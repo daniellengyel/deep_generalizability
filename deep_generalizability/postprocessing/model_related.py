@@ -112,3 +112,49 @@ def get_models_final_distances(beginning_models, final_models):
         dist_arr.append(float(torch.norm(b_vec - f_vec)))
 
     return dist_arr
+
+def get_inp_out_jacobian(models, data, criterion, device=None):
+    jacob_dict = {}
+
+    data_loader = DataLoader(data, batch_size=len(data), shuffle=False)
+
+
+    # get trace
+    for k, m in models.items():
+        curr_jacs = []
+        # for i, (inputs, labels) in enumerate(data_loader):
+        for i in range(len(data[0])):
+            inputs, labels = data[0][i], data[1][i]
+            inputs, labels = inputs.view(1, *inputs.shape), labels.view(1, *labels.shape)
+
+            if device is not None:
+                    inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                        torch.cuda.LongTensor)
+
+            # Compute gradients for input.
+            inputs.requires_grad = True
+
+            m.zero_grad()
+
+            outputs = m(inputs)
+
+            # zero the parameter
+
+            curr_jacob_norm = 0
+            for i in range(len(inputs)):
+                for o in outputs:
+                    m.zero_grad()
+
+                    o.backward()
+
+                    curr_input_grads = inputs.grad
+                    curr_input_grads = grad.view((input_shape[0], np.product(input_shape[1:]))) # batch, rest
+                    
+                    curr_jacob_norm += torch.norm(curr_input_grads, axis=1)**2            
+
+            curr_jacs.append(curr_jacob_norm.detach().numpy())
+
+
+        jacob_dict[k] = np.mean(np.array(curr_jacs).flatten())
+
+    return jacob_dict
