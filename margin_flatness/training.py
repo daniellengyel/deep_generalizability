@@ -76,8 +76,8 @@ def train(config, folder_path, train_data, test_data):
             
             if not took_step:
                 break
-            else:
-                mean_loss = mean_loss_after_step
+
+            mean_loss = mean_loss_after_step
 
             # # Get variation of network weights
             if len(nets) > 1:
@@ -101,7 +101,7 @@ def train(config, folder_path, train_data, test_data):
         #     writer.add_scalar('Accuracy/net_{}'.format(idx_net), accuracy, curr_step)
 
     # save final nets
-    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step)
+    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step) # Potential TODO: Change curr_step to -1 to indicate the end.
 
     return nets
 

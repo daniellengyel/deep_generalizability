@@ -10,7 +10,6 @@ import sys
 
 import re
 
-from .postprocessing import *
 from .training_metrics import * 
 from .utils import * 
 from ..nets import Nets
@@ -26,8 +25,11 @@ def get_outlier_filter(x_data, y_data):
     if len(x_data) < 5:
         return np.array([True]*len(x_data)) # They are all outliers since we don't have enough datapoints
     combined_data = np.concatenate([x_data.reshape(len(x_data), 1), y_data.reshape(len(y_data), 1)], axis=1)
-    clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.05)
-    outlier_filter = clf.fit_predict(combined_data) == 1
+    try:
+        clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.05)
+        outlier_filter = clf.fit_predict(combined_data) == 1
+    except: 
+        return np.array([True]*len(x_data))
     return outlier_filter
     
 def linregress_outliers(x_data, y_data, remove_outliers=True):

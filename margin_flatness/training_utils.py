@@ -28,19 +28,22 @@ def get_nets(net_name, net_params, num_nets, device=None):
         nets = [net.to(device) for net in nets]
     return nets
 
+# TODO add weight decay 
 def get_optimizers(config, nets):
     num_nets = config["num_nets"]
     if config["optimizer"] == "SGD":
         optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
                             momentum=config["momentum"]) for i in range(num_nets)]
-        if ("lr_decay" in config) and (config["lr_decay"] is not None) and (config["lr_decay"] != 0):
-            optimizers = [torch.optim.lr_scheduler.ExponentialLR(optimizer=o, gamma=config["lr_decay"]) for o in
-                        optimizers]
     elif config["optimizer"] == "Adam":
         optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"]) for i in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(config["optimizer"]))
     return optimizers
+
+def get_schedule(config, optimizers):
+    if ("lr_decay" in config) and (config["lr_decay"] is not None) and (config["lr_decay"] != 0):
+            optimizers = [torch.optim.lr_scheduler.ExponentialLR(optimizer=o, gamma=config["lr_decay"]) for o in
+                        optimizers]
 
 def get_criterion(config=None, loss_type=None, device=None):
     assert (config is not None) or (loss_type is not None)

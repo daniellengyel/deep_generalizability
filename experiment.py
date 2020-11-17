@@ -75,10 +75,10 @@ elif config["net_name"] == "KeskarC3":
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["learning_rate"] = 0.215443 #tune.grid_search(list(np.logspace(-2, 0, 4))) 
+config["learning_rate"] = tune.grid_search(list(np.logspace(-3, 0, 10))) 
 config["momentum"] = 0.9
 
-config["batch_train_size"] = 32 # tune.grid_search([32, 256, 1024])
+config["batch_train_size"] = 256 # tune.grid_search([32, 256, 1024])
 config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "MSE" # "cross-entropy"

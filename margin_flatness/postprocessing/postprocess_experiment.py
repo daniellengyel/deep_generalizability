@@ -36,7 +36,7 @@ def get_data_for_experiment(experiment_path):
         data_name = experiment_path.split("/")[-2]
 
     assert cfs.iloc[0]["net_name"] in all_nets
-    vectorized = cfs.ilwoc[0]["net_name"] in ["SimpleNet", "LinearNet", "BatchNormSimpleNet"]
+    vectorized = cfs.iloc[0]["net_name"] in ["SimpleNet", "LinearNet", "BatchNormSimpleNet"]
     reduce_train_per = cfs.iloc[0]["reduce_train_per"]
     seed = cfs.iloc[0]["seed"]
     meta = cfs.iloc[0]["data_meta"]
@@ -283,7 +283,7 @@ STORED_DATA = None
 def get_exp_point_traces(experiment_folder, step, seed, device=None, num_datapoints=1000, on_test_set=False, should_cache=False):
     global STORED_DATA
     traces_dict = {}
-    meta_dict = {"seed": seed}
+    meta_dict = {"seed": seed, "num_datapoints": num_datapoints, "on_test_set": on_test_set, "step": step}
 
     # get data
     if STORED_DATA is None:
