@@ -91,6 +91,7 @@ config["print_stat_freq"] = 1000
 
 config["seed"] = tune.grid_search([0, 5, 10])
 config["device"] = "gpu"
+config["data_seed"] = 0 # should generally not be changed. 
 
 
 # --- Set up folder in which to store all results ---
@@ -102,7 +103,7 @@ os.makedirs(folder_path)
 
 # --- get data ---
 train_data, test_data = mf.data_getters.get_data(data_name, vectorized=config["net_name"] in ["SimpleNet", "LinearNet", "BatchNormSimpleNet"],
-                                 reduce_train_per=config["reduce_train_per"], seed=config["seed"], meta=config["data_meta"])
+                                 reduce_train_per=config["reduce_train_per"], seed=config["data_seed"], meta=config["data_meta"])
 
 if config["device"] == "gpu":
     tune.run(lambda config_inp: mf.training.train(config_inp, folder_path, train_data, test_data), config=config, resources_per_trial={'gpu': 1})
