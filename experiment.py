@@ -78,7 +78,7 @@ config["momentum"] = 0.9
 config["learning_rate_schedule"] = {"name": "step", "gamma": 0.25, "step_size": 50000} #step size is number of steps until applying multiplicative gamma
 
 config["batch_train_size"] = tune.grid_search([32, 256, 1024])
-config["batch_test_size"] = 0 # tune.grid_search([16])
+config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "MSE" # "cross-entropy"
 
