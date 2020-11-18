@@ -43,6 +43,7 @@ def train(config, folder_path, train_data, test_data):
     criterion = get_criterion(config=config)
     optimizers = get_optimizers(config, nets)
     schedulers = get_schedulers(config, optimizers)
+    var_noise = config["var_noise"] if "var_noise" in config else None
 
     # define stopping criterion
     stopping_criterion = get_stopping_criterion(config["num_steps"], config["mean_loss_threshold"])
@@ -72,7 +73,7 @@ def train(config, folder_path, train_data, test_data):
             # do update step for each net
             nets, took_step, mean_loss_after_step = nets_training_step(nets, optimizers,
                                                                                 net_data_loaders, criterion,
-                                                                                var_noise=config["var_noise"],
+                                                                                var_noise=var_noise,
                                                                                 writer=writer, curr_step=curr_step, device=device)
             
             if not took_step:
