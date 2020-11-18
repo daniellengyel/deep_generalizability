@@ -42,6 +42,7 @@ def train(config, folder_path, train_data, test_data):
     #  Define a Loss function and optimizer
     criterion = get_criterion(config=config)
     optimizers = get_optimizers(config, nets)
+    schedulers = get_schedulers(config, optimizers)
 
     # define stopping criterion
     stopping_criterion = get_stopping_criterion(config["num_steps"], config["mean_loss_threshold"])
@@ -91,9 +92,14 @@ def train(config, folder_path, train_data, test_data):
             if (curr_step % config["print_stat_freq"]) == 1:
                 print("Step: {}".format(curr_step))
                 print("Mean Loss: {}".format(mean_loss))
+            
+            print(optimizers[0].param_groups[0]['lr'])
 
             # update curr_step
             curr_step += 1
+            if schedulers is not None:
+                for s in schedulers:
+                    s.step()
 
         # # get test error
         # for idx_net in range(num_nets):

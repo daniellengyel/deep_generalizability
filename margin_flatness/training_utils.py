@@ -31,19 +31,32 @@ def get_nets(net_name, net_params, num_nets, device=None):
 # TODO add weight decay 
 def get_optimizers(config, nets):
     num_nets = config["num_nets"]
+    if ("weight_decay" in config) and (config["weight_decay"] is not None):
+        weight_decay = config["weight_decay"]
+    else:
+        weight_decay = 0
+
     if config["optimizer"] == "SGD":
         optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                            momentum=config["momentum"]) for i in range(num_nets)]
+                            momentum=config["momentum"], weight_decay=weight_decay) for i in range(num_nets)]
     elif config["optimizer"] == "Adam":
         optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"]) for i in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(config["optimizer"]))
     return optimizers
 
-def get_schedule(config, optimizers):
-    if ("lr_decay" in config) and (config["lr_decay"] is not None) and (config["lr_decay"] != 0):
-            optimizers = [torch.optim.lr_scheduler.ExponentialLR(optimizer=o, gamma=config["lr_decay"]) for o in
+def get_schedulers(config, optimizers):
+    if "learning_rate_schedule" not in config:
+        return None
+
+    if "step" == config["learning_rate_schedule"]["name"]:
+            schedulers = [torch.optim.lr_scheduler.StepLR(
+                optimizer=o, gamma=config["learning_rate_schedule"]["gamma"], step_size=config["learning_rate_schedule"]["step_size"]) for o in
                         optimizers]
+    else:
+        return None
+    
+    return schedulers
 
 def get_criterion(config=None, loss_type=None, device=None):
     assert (config is not None) or (loss_type is not None)
