@@ -8,7 +8,6 @@ import datetime
 import socket, sys, os, copy
 
 from collections import defaultdict
-from tensorflow.python.summary.summary_iterator import summary_iterator
 
 from .nets.Nets import *
 
