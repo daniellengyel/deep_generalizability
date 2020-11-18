@@ -82,8 +82,8 @@ config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "MSE" # "cross-entropy"
 
-config["num_steps"] = 200000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
-config["mean_loss_threshold"] = 0.00005 # 0.01 # 0.15
+config["num_steps"] = 100000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["mean_loss_threshold"] = 0.0001 # 0.01 # 0.15
 
 
 config["save_model_freq"] = 10000

@@ -94,8 +94,6 @@ def train(config, folder_path, train_data, test_data):
                 print("Step: {}".format(curr_step))
                 print("Mean Loss: {}".format(mean_loss))
             
-            print(optimizers[0].param_groups[0]['lr'])
-
             # update curr_step
             curr_step += 1
             if schedulers is not None:
