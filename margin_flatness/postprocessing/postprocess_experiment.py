@@ -9,7 +9,7 @@ from ..training_utils import *
 
 from .sharpness_measures import *
 from .model_related import * 
-from .margins import *
+from .robustness import get_inp_out_jacobian_points, get_linear_loss_trace, get_margins_filters
 
 import yaml, os, sys, re
 
@@ -413,15 +413,14 @@ def get_exp_inp_out_jacobian(experiment_folder, step=-1, seed=0, device=None, nu
 
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-        loss_type = cfgs.loc[exp_name]["criterion"]
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
             continue
-        results_dict[exp_name] = get_inp_out_jacobian(models_dict, data, loss_type, device=device)
+        results_dict[exp_name] = get_inp_out_jacobian_points(models_dict, data, device=device)
 
         # cache data
         if should_cache:
-            cache_data(experiment_folder, "inp_out_jacobian".format(loss_type), results_dict, meta_dict, step=step)
+            cache_data(experiment_folder, "inp_out_jacobian", results_dict, meta_dict, step=step)
 
     return results_dict
 

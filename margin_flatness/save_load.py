@@ -48,12 +48,12 @@ def get_models(model_folder_path, step, device=None):
     return models_dict
 
 
-def get_all_models(experiment_folder, step):
+def get_all_models(experiment_folder, step, device=None):
     models_dict = {}
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
         try:
-            models_dict[exp_name] = get_models(curr_path, step)
+            models_dict[exp_name] = get_models(curr_path, step, device)
         except:
             continue
     return models_dict

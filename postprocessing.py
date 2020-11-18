@@ -15,7 +15,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "MNIST"
-    exp = "lr_MSE_test"
+    exp = "lr_CE_test_F1"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -54,7 +54,7 @@ def main():
     # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
     # get_exp_trace(experiment_folder, -1, device=device)
 
-    # mf_post.get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
+    mf_post.get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 
