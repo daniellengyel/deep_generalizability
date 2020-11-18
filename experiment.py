@@ -54,7 +54,7 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "BatchNormSimpleNet"
+config["net_name"] = "KeskarC3"
 
 if config["net_name"] == "SimpleNet":
     width = 256 
@@ -72,8 +72,8 @@ elif config["net_name"] == "KeskarC3":
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
 config["optimizer"] = "SGD" # "Adam"
-config["weight_decay"] = tune.grid_search([0, 0.0001, 0.0005])  # l2 penalty 
-config["learning_rate"] = tune.grid_search([0.1, 0.05, 0.01])
+config["weight_decay"] = 0 # tune.grid_search([0, 0.0001, 0.0005])  # l2 penalty 
+config["learning_rate"] = tune.grid_search(list(np.logspace(-4, 0, 10))) # tune.grid_search([0.1, 0.05, 0.01])
 config["momentum"] = 0.9
 config["learning_rate_schedule"] = {"name": "step", "gamma": 0.25, "step_size": 50000} #step size is number of steps until applying multiplicative gamma
 
@@ -82,14 +82,14 @@ config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy"
 
-config["num_steps"] = 100000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
-config["mean_loss_threshold"] = 0.0005 # 0.01 # 0.15
+config["num_steps"] = 5000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["mean_loss_threshold"] = None # 0.0005 # 0.01 # 0.15
 
 
 config["save_model_freq"] = 10000
-config["print_stat_freq"] = 1000
+config["print_stat_freq"] = 100
 
-config["seed"] = tune.grid_search([0, 5, 10])
+config["seed"] = 0 # tune.grid_search([0, 5, 10])
 config["device"] = "gpu"
 config["data_seed"] = 0 # should generally not be changed. 
 

@@ -15,7 +15,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "MNIST"
-    exp = "lr_CE_test_F1"
+    exp = "lr_CE_test_C3"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch

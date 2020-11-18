@@ -73,7 +73,7 @@ class LinearNet(Module):
     def forward(self, x):
         x = self.fc_layer(x)
         return x
-        
+
 
 class BatchNormSimpleNet(Module):
     def __init__(self, inp_dim, out_dim):
@@ -111,31 +111,33 @@ class KeskarC3(Module):
     def __init__(self, height, width, channels, out_dim):
         super(KeskarC3, self).__init__()
 
+        num_filters = 24
+
         H_conv_padding = int((height + 3)/2) + 1 - (height % 2)
         W_conv_padding = int((width + 3)/2) + 1 - (width % 2)
 
         self.H_pool_padding = int((height + 1)/2) + 1 - (height % 2)
         self.W_pool_padding = int((width + 1)/2) + 1 - (width % 2)
 
-        self.conv1 = nn.Conv2d(in_channels=channels, out_channels=64, kernel_size=[5, 5], stride=2, padding=(H_conv_padding, W_conv_padding))
-        self.bn1 = nn.BatchNorm2d(num_features=64)
+        self.conv1 = nn.Conv2d(in_channels=channels, out_channels=num_filters, kernel_size=[5, 5], stride=2, padding=(H_conv_padding, W_conv_padding))
+        self.bn1 = nn.BatchNorm2d(num_features=num_filters)
         self.pool1 = nn.MaxPool2d(kernel_size=(3, 3), stride=2)
 
-        self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=[5, 5], stride=2, padding=(H_conv_padding, W_conv_padding))
-        self.bn2 = nn.BatchNorm2d(num_features=64)
+        self.conv2 = nn.Conv2d(in_channels=num_filters, out_channels=num_filters, kernel_size=[5, 5], stride=2, padding=(H_conv_padding, W_conv_padding))
+        self.bn2 = nn.BatchNorm2d(num_features=num_filters)
         self.pool2 = nn.MaxPool2d(kernel_size=(3, 3), stride=2)
 
-        self.num_features_before_fcnn = 64*height*width
+        self.num_features_before_fcnn = num_filters*height*width
 
-        self.fc1 = nn.Linear(in_features=self.num_features_before_fcnn, out_features=384)
-        self.bn3 = nn.BatchNorm1d(num_features=384)
+        self.fc1 = nn.Linear(in_features=self.num_features_before_fcnn, out_features=192)
+        self.bn3 = nn.BatchNorm1d(num_features=192)
         self.dp1 = nn.Dropout(p=0.5)
 
-        self.fc2 = nn.Linear(in_features=384, out_features=192)
-        self.bn4 = nn.BatchNorm1d(num_features=192)
+        self.fc2 = nn.Linear(in_features=192, out_features=86)
+        self.bn4 = nn.BatchNorm1d(num_features=86)
         self.dp2 = nn.Dropout(p=0.5)
 
-        self.out_layer = nn.Linear(in_features=192, out_features=out_dim)
+        self.out_layer = nn.Linear(in_features=86, out_features=out_dim)
         
 
     def forward(self, x):
