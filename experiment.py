@@ -82,7 +82,7 @@ config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy"
 
-config["num_steps"] = 100000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 50000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = 0.005 # 0.0005 # 0.01 # 0.15
 
 
