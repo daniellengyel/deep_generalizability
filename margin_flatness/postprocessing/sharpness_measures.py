@@ -39,7 +39,7 @@ def get_point_traces(models, data, criterion, device=None, seed=None):
                 inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
                     torch.cuda.LongTensor)
 
-            curr_traces.append(np.mean(hessian(m, criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=100)))
+            curr_traces.append(hessian(m, criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=100))
         traces[k] = curr_traces
     return traces
 
