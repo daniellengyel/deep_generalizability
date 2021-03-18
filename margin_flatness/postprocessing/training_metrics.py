@@ -107,7 +107,7 @@ def get_metric_at_training_step(runs, var_name, step, exp_ids=None):
 def get_timeseries_training_metrics(exp_ids, metric_name, runs_data=None, exp_folder=None, path_aggregator=None):
     """Assumes every experiement has same number of steps"""
     
-    assert (runs_data is not None) or (exp_foler is not None)
+    assert (runs_data is not None) or (exp_folder is not None)
 
     if runs_data is None:
         runs_data, cached_meta_data = load_cached_data(exp_folder, "runs")

@@ -8,6 +8,7 @@ import os, pickle
 
 
 from .save_load import *
+from .utils import set_seed
 
 from random import random
 

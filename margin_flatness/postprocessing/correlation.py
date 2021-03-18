@@ -17,7 +17,7 @@ from ..utils import *
 
 import itertools
 
-from scipy.stats import linregress
+from scipy.stats import linregress, kendalltau
 from sklearn.neighbors import LocalOutlierFactor
 
 def get_outlier_filter(x_data, y_data):
@@ -88,6 +88,7 @@ def get_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_fil
                     res_dict[exp_id][model_idx]["r_value"][step] = r_value
                 res_dict[exp_id][model_idx]["acc"][step] =  sum(1*correct_filter)/float(len(correct_filter))
     return res_dict
+
 
 if __name__ == "__main__":
                     

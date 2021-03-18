@@ -2,13 +2,10 @@ import numpy as np
 import pandas as pd
 import torch
 
-from .utils import *
+from .utils import get_time_stamp
 from .training_utils import get_nets
 
 import yaml, os, sys, re, copy
-from .nets.Nets import *
-
-from .data_getters import *
 
 import pickle
 
@@ -59,13 +56,18 @@ def get_all_models(experiment_folder, step, device=None):
     return models_dict
 
 
-def cache_data(experiment_folder, name, data, meta_dict=None, step=None):
+def cache_data(
+    experiment_folder, name, data, meta_dict, step, time_stamp
+):
     cache_folder = os.path.join(experiment_folder, "postprocessing", name)
-    if step is not None:
-        cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+    
+    cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+
+    cache_folder = os.path.join(cache_folder, get_time_stamp())
 
     if not os.path.exists(cache_folder):
         os.makedirs(cache_folder)
+
     with open(os.path.join(cache_folder, "data.pkl"), "wb") as f:
         pickle.dump(data, f)
 
@@ -73,27 +75,56 @@ def cache_data(experiment_folder, name, data, meta_dict=None, step=None):
         with open(os.path.join(cache_folder, "meta.yml"), "w") as f:
             yaml.dump(meta_dict, f)
 
-def load_cached_data(experiment_folder, name, step=None):
-    """Available names: ["tsne", "runs", "trace", "acc", "dist", "loss", "grad", "eig"]"""
+def load_cached_data(experiment_folder, name, step, time_stamp):
     cache_folder = os.path.join(experiment_folder, "postprocessing", name)
-    if step is not None:
-        cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+    
+    cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+
+    cache_folder = os.path.join(cache_folder, time_stamp)
 
     cached_data_path = os.path.join(cache_folder, "data.pkl")
     if os.path.isfile(cached_data_path):
         with open(cached_data_path, "rb") as f:
             cached_data = pickle.load(f)
     else:
-        cached_data =  None
-    
-    cached_meta_path = os.path.join(cache_folder, "meta.yaml")
+        cached_data = None
+
+    cached_meta_path = os.path.join(cache_folder, "meta.yml")
     if os.path.isfile(cached_meta_path):
         with open(cached_meta_path, "rb") as f:
             cached_meta_data = yaml.load(f)
     else:
-        cached_meta_data  = None
+        cached_meta_data = None
 
     return cached_data, cached_meta_data
+
+def load_all_cached_meta_data(experiment_folder, name, step):
+    all_cached_meta_data = {}
+
+    cache_folder = os.path.join(experiment_folder, "postprocessing", name)
+    
+    cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+
+    if not os.path.isdir(cache_folder):
+        return None
+
+    for time_stamp in os.listdir(cache_folder):
+        if "DS_Store" in time_stamp:
+            continue        
+        
+        curr_cache_folder = os.path.join(cache_folder, time_stamp)
+
+        cached_meta_path = os.path.join(curr_cache_folder, "meta.yml")
+        if os.path.isfile(cached_meta_path):
+            with open(cached_meta_path, "rb") as f:
+                cached_meta_data = yaml.load(f)
+        else:
+            cached_meta_data = None
+        
+        all_cached_meta_data[time_stamp] = cached_meta_data
+
+    return all_cached_meta_data   
+
 
 def get_cached_data_list(experiment_folder):
     pass

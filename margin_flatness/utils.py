@@ -20,6 +20,11 @@ def get_file_stamp():
     mydate = datetime.datetime.now()
     return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S"), host_name)
 
+def get_time_stamp():
+    """Return time as string for saving files related to the current experiment"""
+    mydate = datetime.datetime.now()
+    return "{}".format(mydate.strftime("%b%d_%H-%M-%S"))
+
 def set_seed(seed):
     if seed is None:
         seed = 0
@@ -88,6 +93,12 @@ def vec_to_net(vec, net):
 
     return new_net
 
+def get_model_num_params(model):
+    num_params = 0
+    for name1, param1 in model.named_parameters():
+        num_params += param1.numel()
+    return num_params
+    
 def torch_cov(m):
     m_exp = torch.mean(m, dim=1)
     x = m - m_exp[:, None]

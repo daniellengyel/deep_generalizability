@@ -15,7 +15,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "MNIST"
-    exp = "lr_CE_test_C3"
+    exp = "CE_K3"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -32,7 +32,7 @@ def main():
 
     
     # print("Getting Point Traces.")
-    mf_post.get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
+    # mf_post.get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
     
     # get_exp_inp_out_jacobian(experiment_folder, step=-1, seed=0, device=device, num_datapoints=10, on_test_set=False, should_cache=True)
 
