@@ -75,12 +75,13 @@ def cache_data(
         with open(os.path.join(cache_folder, "meta.yml"), "w") as f:
             yaml.dump(meta_dict, f)
 
-def load_cached_data(experiment_folder, name, step, time_stamp):
+def load_cached_data(experiment_folder, name, step, time_stamp=None):
     cache_folder = os.path.join(experiment_folder, "postprocessing", name)
     
     cache_folder = os.path.join(cache_folder, "step_{}".format(step))
 
-    cache_folder = os.path.join(cache_folder, time_stamp)
+    if time_stamp is not None:
+        cache_folder = os.path.join(cache_folder, time_stamp)
 
     cached_data_path = os.path.join(cache_folder, "data.pkl")
     if os.path.isfile(cached_data_path):

@@ -35,19 +35,15 @@ INCORRECT_COLOR_IDX = 1
 
 def get_end_stats(exp_folder, step=-1, with_min_max=False):
     
-    runs, _ = load_cached_data(exp_folder, "runs")
-    trace, _ = load_cached_data(exp_folder, "point_traces", step=step) # assume the trace i get is from the end.
+    trace, _ = None, None # load_cached_data(exp_folder, "point_traces", step=step) # assume the trace i get is from the end.
     acc, _ = load_cached_data(exp_folder, "acc", step=step)
     loss, _ = load_cached_data(exp_folder, "loss", step=step)
-    dist, _ = load_cached_data(exp_folder, "dist")
 
     stats_dict = {}
     configs = load_configs(exp_folder)
     for exp_id in configs.index:
 
         num_nets = configs.loc[exp_id]["num_nets"]
-        if runs is not None:
-            num_steps = max(runs[exp_id], key=lambda x: int(x)) - 1
 
         stats_dict[str(exp_id)] = {}
 
@@ -79,21 +75,6 @@ def get_end_stats(exp_folder, step=-1, with_min_max=False):
 
             stats_dict[str(exp_id)]["Acc Gap Mean"] = stats_dict[str(exp_id)]["Acc Test Mean"] - \
                                                     stats_dict[str(exp_id)]["Acc Train Mean"]
-
-        if dist is not None:
-            stats_dict[str(exp_id)]["Dist Mean"] = np.mean(dist[exp_id])
-
-            if with_min_max:
-                stats_dict[str(exp_id)]["Dist Max"] = np.max(dist[exp_id])
-                stats_dict[str(exp_id)]["Dist Min"] = np.min(dist[exp_id])
-        
-        if runs is not None:
-            norm_list = np.array([runs[exp_id][num_steps]["Norm"]["net"][str(nn)] for nn in range(num_nets)])
-            stats_dict[str(exp_id)]['Norm Mean'] = 0 # np.mean(norm_list)
-
-            if with_min_max:
-                stats_dict[str(exp_id)]["Norm Max"] = np.max(norm_list)
-                stats_dict[str(exp_id)]["Norm Min"] = np.min(norm_list)
 
         if trace is not None:
             Trace_list = [np.mean(trace[exp_id][str(nn)]) for nn in range(num_nets)]
@@ -229,7 +210,6 @@ def plot_regression(x_data, y_data, color, remove_outliers=True):
 
     slope, intercept, r_value, _, _ = linregress_outliers(x_data, y_data, remove_outliers=remove_outliers)
 
-    
     plot_corr, = plt.plot([min_x, max_x], [slope*min_x + intercept, max_x*slope + intercept], color=color)
     
     if remove_outliers:

@@ -19,6 +19,8 @@ import itertools
 
 from scipy.stats import linregress, kendalltau
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.isotonic import IsotonicRegression
+from sklearn.metrics import r2_score
 
 def get_outlier_filter(x_data, y_data):
     n_neighbors = 3
@@ -43,7 +45,30 @@ def linregress_outliers(x_data, y_data, remove_outliers=True):
 
     return linregress(x_data, y_data)
 
-def get_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_filter):
+def get_kendall(x_data, y_data, remove_outliers=True):
+    if len(x_data) == 0:
+        return 0, 0, 0, None, None
+    x_data, y_data = np.array(x_data), np.array(y_data)
+
+    if remove_outliers:
+        outlier_filter = get_outlier_filter(x_data, y_data)
+        x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
+    return kendalltau(x_data, y_data)
+ 
+def get_isotonic_r_squared(x_data, y_data, remove_outliers=True, increasing=False):
+    if len(x_data) == 0:
+        return 0, 0, 0, None, None
+    x_data, y_data = np.array(x_data), np.array(y_data)
+
+    if remove_outliers:
+        outlier_filter = get_outlier_filter(x_data, y_data)
+        x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
+
+    iso_reg = IsotonicRegression(increasing=increasing).fit(x_data, y_data)
+    y_predicted = iso_reg.predict(x_data)
+    return r2_score(y_data, y_predicted)
+
+def get_pearson_corr_array(experiment_folder, X_data_filter_f, Y_data_f, use_correct_filter):
     all_steps = get_exp_steps(experiment_folder)
     all_steps = np.array([list(v.keys()) for v in all_steps.values()]).reshape(-1)
     all_steps = sorted(list(set(all_steps)))
