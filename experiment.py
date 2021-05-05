@@ -12,7 +12,7 @@ import pickle
 config = {}
 
 # data specific
-data_name = "MNIST"
+data_name = "CIFAR10"
 
 if data_name == "CIFAR10":
     num_channels = 3
@@ -54,7 +54,8 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "KeskarC3"
+config["net_name"] = "BatchNormSimpleNet"
+activation_function = "relu"
 
 if config["net_name"] == "SimpleNet":
     width = 256 
@@ -63,7 +64,8 @@ if config["net_name"] == "SimpleNet":
 elif config["net_name"] == "LinearNet":
     config["net_params"] = [inp_dim, out_dim]
 elif config["net_name"] == "BatchNormSimpleNet":
-    config["net_params"] = [inp_dim, out_dim]
+    width = 256
+    config["net_params"] = [inp_dim, out_dim, width, activation_function]
 elif config["net_name"] == "LeNet":
     config["net_params"] = [height, width, num_channels, out_dim]
 elif config["net_name"] == "KeskarC3":

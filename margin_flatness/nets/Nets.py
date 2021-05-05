@@ -70,10 +70,16 @@ class LinearNet(Module):
 
 
 class BatchNormSimpleNet(Module):
-    def __init__(self, inp_dim, out_dim):
+    def __init__(self, inp_dim, out_dim, width=None, activation=None):
         super(BatchNormSimpleNet, self).__init__()
 
-        width = 256
+        if width is None:
+            width = 256
+
+        if activation is None or activation == "relu":
+            self.activation = F.relu
+        if activation == "sigmoid":
+            self.activation = F.Hardsigmoid
 
         self.fc1 = nn.Linear(inp_dim, width)
         self.bn1 = nn.BatchNorm1d(num_features=width)
@@ -89,11 +95,11 @@ class BatchNormSimpleNet(Module):
         self.fc_final = nn.Linear(width, out_dim)
 
     def forward(self, x):
-        x = F.relu(self.bn1(self.fc1(x)))
-        x = F.relu(self.bn2(self.fc2(x)))
-        x = F.relu(self.bn3(self.fc3(x)))
-        x = F.relu(self.bn4(self.fc4(x)))
-        x = F.relu(self.bn5(self.fc5(x)))
+        x = self.activation(self.bn1(self.fc1(x)))
+        x = self.activation(self.bn2(self.fc2(x)))
+        x = self.activation(self.bn3(self.fc3(x)))
+        x = self.activation(self.bn4(self.fc4(x)))
+        x = self.activation(self.bn5(self.fc5(x)))
         x = self.fc_final(x)
         return x
 
