@@ -36,7 +36,7 @@ def get_models_loss_acc(models, train_data, test_data, criterion, loss_type, dev
         acc_dict[k] = (get_net_accuracy(m, train_loader, is_binary_classification, device=device), get_net_accuracy(m, test_loader, is_binary_classification, device=device))
     return loss_dict, acc_dict
 
-def get_point_loss(models, data, loss_type, device=None):
+def get_point_loss(models, data, loss_type, device=None, unit_output=False):
 
     results = {}
     if device is not None:
@@ -49,10 +49,13 @@ def get_point_loss(models, data, loss_type, device=None):
     is_binary_classification = loss_type in ["BinaryExponentialLoss"]
 
     for k, m in models.items():
-        
+        m.eval()
+
         point_losses = []
         for i, (inputs, labels) in enumerate(data_loader):
             outputs = m(inputs)
+            if unit_output:
+                outputs = outputs / torch.norm(outputs, dim=1)
             point_losses.append(float(criterion(outputs, labels)))
         point_losses = np.array(point_losses)
         

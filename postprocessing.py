@@ -15,7 +15,7 @@ def main():
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "MNIST"
-    exp = "CE_K3"
+    exp = "MSE_F1"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -26,6 +26,11 @@ def main():
     else:
         device = None
         # device = torch.device("cpu")
+
+    meta = {"N": 100, "delta": 0.0015, "criterion": "cross-entropy"}
+    mf_post.compute_on_experiment(experiment_folder, "point_loss", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
+    mf_post.compute_on_experiment(experiment_folder, "point_traces", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
+
 
     # get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
     #                          "Trace", "Gradient"])  # TODO does not find acc and var
@@ -54,7 +59,8 @@ def main():
     # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
     # get_exp_trace(experiment_folder, -1, device=device)
 
-    mf_post.get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
+    # mf_post.get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
+
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 

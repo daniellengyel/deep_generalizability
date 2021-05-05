@@ -4,6 +4,7 @@ import torch
 
 from .utils import get_time_stamp
 from .training_utils import get_nets
+from .nets.Nets import ScaledOutputNet
 
 import yaml, os, sys, re, copy
 
@@ -40,7 +41,7 @@ def get_models(model_folder_path, step, device=None):
         for model_file_name in files:
             model_idx = model_file_name.split("_")[1].split(".")[0]
             model = load_model(os.path.join(root, model_file_name), device)
-            models_dict[model_idx] = model
+            models_dict[model_idx] = ScaledOutputNet(model, scale=20)
 
     return models_dict
 
@@ -49,10 +50,10 @@ def get_all_models(experiment_folder, step, device=None):
     models_dict = {}
     # iterate through models
     for exp_name, curr_path in exp_models_path_generator(experiment_folder):
-        try:
-            models_dict[exp_name] = get_models(curr_path, step, device)
-        except:
-            continue
+        # try:
+        models_dict[exp_name] = get_models(curr_path, step, device)
+        # except:
+        #     continue
     return models_dict
 
 

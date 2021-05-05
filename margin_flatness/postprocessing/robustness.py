@@ -11,7 +11,28 @@ from ..nets import Nets
 from ..utils import get_correct_filter, get_model_outputs, set_seed, take_slice
 from ..training_utils import get_criterion
 
+def get_max_output(models, data, device=None, get_upperbound=False, softmax_outputs=False, seed=None):
+    assert (not get_upperbound) or softmax_outputs # if get_upperbound then softmax_outputs
 
+    set_seed(seed)
+
+    max_outputs = {}
+    if device is not None:
+        is_gpu = True
+    else:
+        is_gpu = False
+
+    inputs, labels = iter(DataLoader(data, batch_size=len(data), shuffle=False)).next()
+
+    for k, m in models.items():
+
+        outputs = get_model_outputs(m, data, softmax_outputs=softmax_outputs, device=device)
+        _, predicted = torch.max(outputs, 1)
+        correct_filter = predicted == labels 
+
+        max_outputs[k] = torch.topk(outputs, k=1, dim=1)[0].detach().numpy()
+
+    return max_outputs
 
 def get_margins(models, data, device=None, get_upperbound=False, softmax_outputs=False, seed=None):
     assert (not get_upperbound) or softmax_outputs # if get_upperbound then softmax_outputs

@@ -8,9 +8,9 @@ from ..data_getters import *
 from ..data_getters import get_random_data_subset
 from ..training_utils import get_criterion
 
-from .sharpness import get_affine_trace, sample_average_flatness_pointwise, get_point_traces
+from .sharpness import get_affine_trace, sample_average_flatness_pointwise, get_point_traces, get_point_unit_traces
 from .model_related import get_point_loss, get_models_loss_acc
-from .robustness import get_inp_out_jacobian_points, get_margins
+from .robustness import get_inp_out_jacobian_points, get_margins, get_max_output
 
 import yaml, os, sys, re, time
 from tqdm import tqdm
@@ -77,13 +77,17 @@ def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_
 
 
 
-def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, on_test_set, device, verbose=False):
+def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, on_test_set, device, verbose=False, check_cache=True, meta=None):
 
     meta_dict = {"seed": seed, "num_datapoints": num_datapoints, "on_test_set": on_test_set, "step": step}
-    cached_results = check_if_already_computed(experiment_folder, name, step, meta_dict)
+    meta_dict["meta"] = meta
 
-    if cached_results is not None:
-        return cached_results
+    if check_cache:
+        cached_results = check_if_already_computed(experiment_folder, name, step, meta_dict)
+
+        if cached_results is not None:
+            print("Got cached results.")
+            return cached_results
 
     results_dict = {}
     cfgs = load_configs(experiment_folder)
@@ -96,16 +100,22 @@ def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, o
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
 
     # iterate through models
+    counter = 0
     for exp_name, curr_path in tqdm(exp_models_path_generator(experiment_folder), disable=(not verbose)):
-
+        if counter >= 8:
+            break
+        counter += 1
         criterion = get_criterion(cfgs.loc[exp_name])
-        loss_type = cfgs.loc[exp_name]["criterion"]
+        if meta["criterion"] is None:
+            loss_type = cfgs.loc[exp_name]["criterion"]
+        else:
+            loss_type = meta["criterion"]
 
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
             continue
 
-        results_dict[exp_name] = helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=device) # potentially change how we do loss_type and criterion
+        results_dict[exp_name] = helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=device, meta=meta) # potentially change how we do loss_type and criterion
 
     # cache data
     cache_data(experiment_folder, name, results_dict, meta_dict, step=step, time_stamp=True)
@@ -113,15 +123,15 @@ def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, o
     return results_dict
 
 
-def helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=None):
-    """robustness: [inp_out_jacobian, softmax_margins, output_margins, affine_upperbound_margins]
-    flatness: [affine_trace, point_traces, sample_average_flatness_pointwise]"""
-
+def helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=None, meta=None):
+    """robustness: [inp_out_jacobian, softmax_margins, output_margins, affine_upperbound_margins, point_loss, point_unit_loss]
+    flatness: [affine_trace, point_traces, point_unit_traces, sample_average_flatness_pointwise]"""
+    
     if name == "inp_out_jacobian":
         return get_inp_out_jacobian_points(models_dict, data, device=device)
 
     elif name == "sample_average_flatness_pointwise":
-        return sample_average_flatness_pointwise(models_dict, data, criterion, 100, 0.1, seed=seed)
+        return sample_average_flatness_pointwise(models_dict, data, criterion, meta, seed=seed)
 
     elif name == "affine_trace":
         return get_affine_trace(models_dict, data, loss_type, device=device)
@@ -129,17 +139,26 @@ def helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_
     elif name == "point_traces":
         return get_point_traces(models_dict, data, criterion, device=device, seed=seed)
 
+    elif name == "point_unit_traces":
+        return get_point_unit_traces(models_dict, data, criterion, device=device, seed=seed)
+
     elif name == "softmax_margins":
         return get_margins(models_dict, data, device=device, get_upperbound=False, softmax_outputs=True, seed=seed)
 
     elif name == "output_margins":
         return get_margins(models_dict, data, device=device, get_upperbound=False, softmax_outputs=False, seed=seed)
 
+    elif name == "point_output":
+        return get_max_output(models_dict, data, device=device, get_upperbound=False, softmax_outputs=False, seed=seed)
+
     elif name == "affine_upperbound_margins":
         return get_margins(models_dict, data, device=device, get_upperbound=True, softmax_outputs=True, seed=seed)
 
     elif name == "point_loss":
         return get_point_loss(models_dict, data, loss_type, device=device)
+        
+    elif name == "point_unit_loss":
+        return get_point_loss(models_dict, data, loss_type, device=device, unit_output=True)
 
 
 def check_if_already_computed(experiment_folder, name, step, meta_data):

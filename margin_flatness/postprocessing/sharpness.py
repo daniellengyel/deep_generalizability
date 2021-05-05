@@ -9,6 +9,7 @@ from sklearn.manifold import TSNE
 
 from ..utils import *
 from ..data_getters import *
+from ..nets.Nets import UnitvectorOutputNet
 
 import yaml, os, sys, re, time
 
@@ -18,6 +19,7 @@ import torch
 # from hessian_eigenthings import compute_hessian_eigenthings
 
 import pickle
+
 
 
 def get_point_traces(models, data, criterion, device=None, seed=None):
@@ -40,6 +42,29 @@ def get_point_traces(models, data, criterion, device=None, seed=None):
                     torch.cuda.LongTensor)
 
             curr_traces.append(np.mean(hessian(m, criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=100))) # TODO: MEAN OR NOT TO MEAN
+        traces[k] = curr_traces
+    return traces
+
+def get_point_unit_traces(models, data, criterion, device=None, seed=None):
+    set_seed(seed)
+
+    traces = {}
+    if device is not None:
+        is_gpu = True
+    else:
+        is_gpu = False
+
+    dataloader = DataLoader(data, batch_size=1, shuffle=False) 
+
+    for k, m in models.items():
+        curr_traces = []
+        for i, (inputs, labels) in enumerate(dataloader):
+
+            if device is not None:
+                inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                    torch.cuda.LongTensor)
+
+            curr_traces.append(np.mean(hessian(UnitvectorOutputNet(m), criterion, data=(inputs, labels), cuda=is_gpu).trace(maxIter=100))) # TODO: MEAN OR NOT TO MEAN
         traces[k] = curr_traces
     return traces
 
@@ -77,7 +102,7 @@ def get_affine_trace(models, data, loss_type, device=None):
     return results
 
 # TODO: What to do about negative values
-def sample_average_flatness_pointwise(models, data, criterion, N, delta, seed=None):
+def sample_average_flatness_pointwise(models, data, criterion, meta, seed=None):
     set_seed(seed)
     flatness = {}
     # if device is not None:
@@ -85,17 +110,18 @@ def sample_average_flatness_pointwise(models, data, criterion, N, delta, seed=No
     # else:
     #     is_gpu = False
 
+    N, delta = meta["N"], meta["delta"]
+
     dataloader = DataLoader(data, batch_size=len(data), shuffle=False) 
 
     for k, m in models.items():
         m.eval()
 
         run_sums = np.zeros(len(data))
+        vec_net = get_params_vec(m)
 
         for _ in range(N):
-            vec_net = get_params_vec(m)
             perturbed_net = vec_to_net(vec_net + delta*torch.rand(len(vec_net)), m) # TODO different size
-            
 
             for i, (inputs, labels) in enumerate(dataloader):
 
@@ -106,7 +132,6 @@ def sample_average_flatness_pointwise(models, data, criterion, N, delta, seed=No
                 outputs = perturbed_net(inputs)
                 for j, o in enumerate(outputs):
                     run_sums[j] += criterion(o.view(1, -1), labels[j].view(1))
-
         average_loss = run_sums/float(N)
 
         # get unpreturbed loss
@@ -124,7 +149,7 @@ def sample_average_flatness_pointwise(models, data, criterion, N, delta, seed=No
         flatness[k] = average_loss - curr_loss
     return flatness
 
-# Slower version but more accurate
+# Slower version but more accurate since i am not reusing the preturbed net for other datapoints. 
     # for k, m in models.items():
     #     m.eval()
     #     curr_flatness = []

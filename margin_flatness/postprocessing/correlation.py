@@ -23,18 +23,18 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import r2_score
 
 def get_outlier_filter(x_data, y_data):
-    n_neighbors = 3
+    n_neighbors = 10
     if len(x_data) < 5:
         return np.array([True]*len(x_data)) # They are all outliers since we don't have enough datapoints
     combined_data = np.concatenate([x_data.reshape(len(x_data), 1), y_data.reshape(len(y_data), 1)], axis=1)
     try:
-        clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.05)
+        clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.2)
         outlier_filter = clf.fit_predict(combined_data) == 1
     except: 
         return np.array([True]*len(x_data))
     return outlier_filter
     
-def linregress_outliers(x_data, y_data, remove_outliers=True):
+def linregress_outliers(x_data, y_data, remove_outliers=False):
     if len(x_data) == 0:
         return 0, 0, 0, None, None
     x_data, y_data = np.array(x_data), np.array(y_data)
@@ -45,7 +45,7 @@ def linregress_outliers(x_data, y_data, remove_outliers=True):
 
     return linregress(x_data, y_data)
 
-def get_kendall(x_data, y_data, remove_outliers=True):
+def get_kendall(x_data, y_data, remove_outliers=False):
     if len(x_data) == 0:
         return 0, 0, 0, None, None
     x_data, y_data = np.array(x_data), np.array(y_data)
@@ -55,7 +55,7 @@ def get_kendall(x_data, y_data, remove_outliers=True):
         x_data, y_data = x_data[outlier_filter], y_data[outlier_filter]
     return kendalltau(x_data, y_data)
  
-def get_isotonic_r_squared(x_data, y_data, remove_outliers=True, increasing=False):
+def get_isotonic_r_squared(x_data, y_data, remove_outliers=True, increasing="auto"):
     if len(x_data) == 0:
         return 0, 0, 0, None, None
     x_data, y_data = np.array(x_data), np.array(y_data)

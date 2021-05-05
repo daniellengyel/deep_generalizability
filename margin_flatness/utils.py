@@ -69,6 +69,9 @@ def get_params_vec(net):
     param_vec = torch.cat([p.view(-1) for p in net.parameters()])
     return param_vec
 
+def get_params_norm(net):
+    return np.linalg.norm(get_params_vec(net).detach().numpy())
+
 
 def get_grad_params_vec(net):
     param_vec = torch.cat([p.grad.view(-1) for p in net.parameters()])

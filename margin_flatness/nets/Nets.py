@@ -1,9 +1,3 @@
-########################################################################
-# 2. Define a Convolutional Neural Network
-# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# Copy the neural network from the Neural Networks section before and modify it to
-# take 3-channel images (instead of 1-channel images as it was defined).
-
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Module
@@ -162,3 +156,27 @@ class KeskarC3(Module):
         x = self.out_layer(x)
 
         return x
+
+
+class UnitvectorOutputNet(Module):
+
+    def __init__(self, model):
+        super(UnitvectorOutputNet, self).__init__()
+        self.model = model
+
+    def forward(self, x):
+        y = self.model(x)
+        y = y / torch.norm(y, dim=1)
+        return y
+
+class ScaledOutputNet(Module):
+
+    def __init__(self, model, scale=20):
+        super(ScaledOutputNet, self).__init__()
+        self.model = model
+        self.scale = scale
+
+    def forward(self, x):
+        y = self.model(x)
+        y = y * self.scale
+        return y
