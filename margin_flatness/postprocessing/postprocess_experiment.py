@@ -40,7 +40,9 @@ def get_runs(experiment_folder, names):
     return run_dir
 
 # Ok not to have explicit seed since we are using the whole dataset.
-def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_datapoints=-1, device=None):
+def get_exp_loss_acc(experiment_folder, step, seed=0, num_train_datapoints=-1, num_test_datapoints=-1, device=None):
+    meta_dict = {"seed": seed, "num_train_datapoints": num_train_datapoints, "num_test_datapoints": num_test_datapoints, "step": step}
+
     print("Get loss acc")
     # init
     loss_dict = {}
@@ -49,11 +51,11 @@ def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_
     # get data
     train_data, test_data = get_data_for_experiment(experiment_folder)
 
-    if test_datapoints == -1:
+    if num_test_datapoints == -1:
         num_test_datapoints = len(test_data)
     test_data = get_random_data_subset(test_data, num_datapoints=num_test_datapoints, seed=seed)
 
-    if train_datapoints == -1:
+    if num_train_datapoints == -1:
         num_train_datapoints = len(train_data)
     train_data = get_random_data_subset(train_data, num_datapoints=num_train_datapoints, seed=seed)
 
@@ -69,8 +71,8 @@ def get_exp_loss_acc(experiment_folder, step, seed=0, train_datapoints=-1, test_
         loss_dict[exp_name], acc_dict[exp_name] = get_models_loss_acc(models_dict, train_data, test_data, criterion, loss_type,
                                                                       device=device)
         # cache data
-        cache_data(experiment_folder, "loss", loss_dict, step=step)
-        cache_data(experiment_folder, "acc", acc_dict, step=step)
+        cache_data(experiment_folder, "loss", loss_dict, meta_dict, step=step, time_stamp=False)
+        cache_data(experiment_folder, "acc", acc_dict, meta_dict, step=step, time_stamp=False)
 
     return loss_dict, acc_dict
 

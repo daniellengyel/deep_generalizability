@@ -231,6 +231,8 @@ def get_net_accuracy(net, data_loader, is_binary_classification=False, full_data
     correct = 0
     total = 0
 
+    net.eval()
+
     for idx, (inputs, labels) in enumerate(data_loader):
         if device is not None:
             inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
@@ -266,7 +268,6 @@ def get_net_loss(net, data_loader, criterion, full_dataset=False, device=None):
         loss_sum += float(criterion(outputs, labels))
         if not full_dataset:
             break
-
     return loss_sum / (idx + 1)
 
 

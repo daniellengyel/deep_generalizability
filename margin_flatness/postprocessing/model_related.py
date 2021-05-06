@@ -20,7 +20,6 @@ import pickle
 
 def get_models_loss_acc(models, train_data, test_data, criterion, loss_type, device=None, seed=None):
     set_seed(seed)
-
     loss_dict = {}
     acc_dict = {}
 

@@ -54,8 +54,8 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "BatchNormSimpleNet"
-activation_function = "relu"
+config["net_name"] = "KeskarC3"
+activation_function = None # "sigmoid"
 
 if config["net_name"] == "SimpleNet":
     width = 256 
@@ -64,7 +64,7 @@ if config["net_name"] == "SimpleNet":
 elif config["net_name"] == "LinearNet":
     config["net_params"] = [inp_dim, out_dim]
 elif config["net_name"] == "BatchNormSimpleNet":
-    width = 256
+    width = tune.grid_search([256, 64, 512])
     config["net_params"] = [inp_dim, out_dim, width, activation_function]
 elif config["net_name"] == "LeNet":
     config["net_params"] = [height, width, num_channels, out_dim]
@@ -73,13 +73,13 @@ elif config["net_name"] == "KeskarC3":
 
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
-config["optimizer"] = "SGD" # "Adam"
-config["weight_decay"] =  tune.grid_search([0, 0.0001, 0.0005])  # l2 penalty 
-config["learning_rate"] = tune.grid_search([0.2, 0.05, 0.01])
+config["optimizer"] = tune.grid_search(["SGD", "Adam"])
+config["weight_decay"] = 0 # tune.grid_search([0, 0.0001, 0.0005])  # l2 penalty 
+config["learning_rate"] = tune.grid_search([1, 0.5, 0.25, 0.1, 0.05, 0.01])
 config["momentum"] = 0.9
-config["learning_rate_schedule"] = {"name": "step", "gamma": 0.25, "step_size": 50000} #step size is number of steps until applying multiplicative gamma
+config["learning_rate_schedule"] = {"name": "step", "gamma": 0.75, "step_size": 10000} # step size is number of steps until applying multiplicative gamma
 
-config["batch_train_size"] = tune.grid_search([32, 256, 1024])
+config["batch_train_size"] = 256 # tune.grid_search([32, 256, 1024])
 config["batch_test_size"] = 1 # tune.grid_search([16])
 
 config["criterion"] = "cross-entropy"
@@ -89,9 +89,9 @@ config["mean_loss_threshold"] = 0.005 # 0.0005 # 0.01 # 0.15
 
 
 config["save_model_freq"] = 10000
-config["print_stat_freq"] = 100
+config["print_stat_freq"] = 5000
 
-config["seed"] = tune.grid_search([0, 5, 10])
+config["seed"] = 0 # tune.grid_search([0, 5, 10])
 config["device"] = "gpu"
 config["data_seed"] = 0 # should generally not be changed. 
 

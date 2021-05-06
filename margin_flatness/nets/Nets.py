@@ -79,7 +79,7 @@ class BatchNormSimpleNet(Module):
         if activation is None or activation == "relu":
             self.activation = F.relu
         if activation == "sigmoid":
-            self.activation = F.Hardsigmoid
+            self.activation = F.hardsigmoid
 
         self.fc1 = nn.Linear(inp_dim, width)
         self.bn1 = nn.BatchNorm1d(num_features=width)

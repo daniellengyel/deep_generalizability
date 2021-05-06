@@ -21,7 +21,7 @@ import os, time
 
 def train(config, folder_path, train_data, test_data):
     # init torch
-    # TODO should also be a method. Probably in utils
+    # TODO should be a method in utils
     if config["device"] == "gpu":
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
@@ -82,9 +82,9 @@ def train(config, folder_path, train_data, test_data):
             mean_loss = mean_loss_after_step
 
             # # Get variation of network weights
-            if len(nets) > 1:
-                covs = get_params_cov(nets)
-                writer.add_scalar('WeightVarTrace/', torch.norm(covs), curr_step)
+            # if len(nets) > 1:
+            #     covs = get_params_cov(nets)
+            #     writer.add_scalar('WeightVarTrace/', torch.norm(covs), curr_step)
 
             # save nets
             if (curr_step % config["save_model_freq"]) == 1:
@@ -180,10 +180,10 @@ def training_step(net, iter_data_loader, optimizer, criterion, var_noise=None, w
     curr_grad = torch.norm(param_grads)
 
     # store metrics for each net
-    if writer is not None:
-        writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
-        writer.add_scalar('Gradient/train/net_{}'.format(idx_net), curr_grad, curr_step)
-        writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
+    # if writer is not None:
+    #     writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
+    #     writer.add_scalar('Gradient/train/net_{}'.format(idx_net), curr_grad, curr_step)
+    #     writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
 
 
     assert took_step or (idx_net == 0)

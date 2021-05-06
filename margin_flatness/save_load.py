@@ -64,7 +64,8 @@ def cache_data(
     
     cache_folder = os.path.join(cache_folder, "step_{}".format(step))
 
-    cache_folder = os.path.join(cache_folder, get_time_stamp())
+    if time_stamp:
+        cache_folder = os.path.join(cache_folder, get_time_stamp())
 
     if not os.path.exists(cache_folder):
         os.makedirs(cache_folder)

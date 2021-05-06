@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 import margin_flatness.postprocessing.postprocess_experiment as mf_post
+import margin_flatness
 
 import yaml, os, sys, re
 
@@ -14,8 +15,8 @@ def main():
     # # # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
-    data_name = "MNIST"
-    exp = "MSE_F1"
+    data_name = "CIFAR10"
+    exp = "May06_01-25-08_kingfisher.doc.ic.ac.uk"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -27,9 +28,13 @@ def main():
         device = None
         # device = torch.device("cpu")
 
+    # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
+    print(margin_flatness.postprocessing.stats_plotting.get_end_stats(experiment_folder, step=-1, with_min_max=False))
+    
     meta = {"N": 100, "delta": 0.0015, "criterion": "cross-entropy"}
-    mf_post.compute_on_experiment(experiment_folder, "point_loss", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
-    mf_post.compute_on_experiment(experiment_folder, "point_traces", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
+
+    # mf_post.compute_on_experiment(experiment_folder, "point_loss", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
+    # mf_post.compute_on_experiment(experiment_folder, "point_traces", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
 
 
     # get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
