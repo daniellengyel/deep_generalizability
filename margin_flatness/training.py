@@ -108,7 +108,8 @@ def train(config, folder_path, train_data, test_data):
     # save final nets
     save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step) # Potential TODO: Change curr_step to -1 to indicate the end.
 
-    return nets
+    # return nets
+    return 1
 
 def nets_training_step(nets, net_optimizers, net_data_loaders, criterion, var_noise=None,
                     writer=None, curr_step=-1, device=None):

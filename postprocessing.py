@@ -15,8 +15,8 @@ def main():
     # # # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
-    data_name = "CIFAR10"
-    exp = "May06_01-25-08_kingfisher.doc.ic.ac.uk"
+    data_name = "KMNIST"
+    exp = "May12_15-30-34_cx3-3-29.cx3.hpc.ic.ac.uk"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -28,8 +28,8 @@ def main():
         device = None
         # device = torch.device("cpu")
 
-    # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
-    print(margin_flatness.postprocessing.stats_plotting.get_end_stats(experiment_folder, step=-1, with_min_max=False))
+    mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
+    # print(margin_flatness.postprocessing.stats_plotting.get_end_stats(experiment_folder, step=-1, with_min_max=False))
     
     meta = {"N": 100, "delta": 0.0015, "criterion": "cross-entropy"}
 

@@ -25,6 +25,8 @@ def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=No
         train_data, test_data = _get_mis_gauss(seed=seed)
     elif data_name == "MNIST":
         train_data, test_data = _get_MNIST()
+    elif data_name == "KMNIST":
+        train_data, test_data = _get_KMNIST()
     elif data_name == "CIFAR10":
         train_data, test_data = _get_CIFAR10()
     elif data_name == "FashionMNIST":
@@ -48,6 +50,24 @@ def get_random_data_subset(data, num_datapoints=1, seed=0):
     return DataWrapper(next(iter(data_loader)))
 
 
+def _get_KMNIST():
+    train_data = torchvision.datasets.KMNIST(os.path.join(PATH_TO_DATA, "KMNIST"), train=True,
+                                            download=True,
+                                            transform=torchvision.transforms.Compose([
+                                                torchvision.transforms.ToTensor(),
+                                                torchvision.transforms.Normalize(
+                                                    (0.1307,), (0.3081,))
+                                            ]))
+    test_data = torchvision.datasets.KMNIST(os.path.join(PATH_TO_DATA, "KMNIST"), train=False,
+                                           download=True,
+                                           transform=torchvision.transforms.Compose([
+                                               torchvision.transforms.ToTensor(),
+                                               torchvision.transforms.Normalize(
+                                                   (0.1307,), (0.3081,))
+                                           ]))
+
+    return train_data, test_data
+
 def _get_MNIST():
     train_data = torchvision.datasets.MNIST(os.path.join(PATH_TO_DATA, "MNIST"), train=True,
                                             download=True,
@@ -65,7 +85,6 @@ def _get_MNIST():
                                            ]))
 
     return train_data, test_data
-
 
 def _get_FashionMNIST():
     train_data = torchvision.datasets.FashionMNIST(

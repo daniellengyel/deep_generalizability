@@ -4,4 +4,6 @@ playground/
 experiments/
 data/
 figs/
+experiments.sh.*
+postprocessing.sh.*
 
