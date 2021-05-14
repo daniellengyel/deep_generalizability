@@ -111,7 +111,11 @@ config["mean_loss_threshold"] = 0 # 0.0005 # 0.01 # 0.15
 config["save_model_freq"] = 10000
 config["print_stat_freq"] = 1000
 
+<<<<<<< Updated upstream
 config["seed"] = tune.grid_search([0, 5, 10])
+=======
+config["seed"] = 0 # tune.grid_search([0, 5, 10])
+>>>>>>> Stashed changes
 config["device"] = "cpu"
 config["data_seed"] = 0 # should generally not be changed. 
 
@@ -129,7 +133,11 @@ train_data, test_data = mf.data_getters.get_data(data_name, vectorized=config["n
 
 
 # ray.shutdown()
+<<<<<<< Updated upstream
 ray.init(_temp_dir='/rds/general/user/dl2119/ephemeral', num_cpus=32)
+=======
+# ray.init(_temp_dir='/rds/general/user/dl2119/ephemeral', num_cpus=4)
+>>>>>>> Stashed changes
 
 if config["device"] == "gpu":
     tune.run(lambda config_inp: mf.training.train(config_inp, folder_path, train_data, test_data), config=config, resources_per_trial={'gpu': 1})
