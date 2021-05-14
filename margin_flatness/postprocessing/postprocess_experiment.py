@@ -143,9 +143,9 @@ def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, se
         return
 
     results_dict = {}
-    results_dict[exp_name] = exp_name
+    # results_dict[exp_name] = exp_name
 
-    # results_dict[exp_name] = helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=device, meta=meta_dict['meta']) # potentially change how we do loss_type and criterion
+    results_dict[exp_name] = helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=device, meta=meta_dict['meta']) # potentially change how we do loss_type and criterion
 
     # cache data
     cache_data(experiment_folder, name, results_dict, meta_dict, step=step, create_time_stamp=False, costum_time_stamp=time_stamp, sub_name=exp_name)
@@ -157,7 +157,6 @@ def multi_compute_on_experiment(experiment_folder, name, step, seed, num_datapoi
     meta_dict = {"seed": seed, "num_datapoints": num_datapoints, "on_test_set": on_test_set, "step": step}
     meta_dict["meta"] = meta
 
-    results_dict = {}
     cfgs = load_configs(experiment_folder)
     exp_name_paths = {"exp_paths": tune.grid_search(list(exp_models_path_generator(experiment_folder)))}
     time_stamp = get_time_stamp()
@@ -179,7 +178,7 @@ def multi_compute_on_experiment(experiment_folder, name, step, seed, num_datapoi
         tune.run(lambda exp_id_path: get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict), config=exp_name_paths)
     
     # cache data
-    join_cached_sub_data(experiment_folder, name, step, time_stamp)    
+    results_dict = join_cached_sub_data(experiment_folder, name, step, time_stamp)    
     
     return results_dict
 
