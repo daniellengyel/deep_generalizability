@@ -4,7 +4,6 @@ import torch
 
 from .utils import get_time_stamp
 from .training_utils import get_nets
-from .nets.Nets import ScaledOutputNet
 
 import yaml, os, sys, re, copy
 
@@ -41,7 +40,7 @@ def get_models(model_folder_path, step, device=None):
         for model_file_name in files:
             model_idx = model_file_name.split("_")[1].split(".")[0]
             model = load_model(os.path.join(root, model_file_name), device)
-            models_dict[model_idx] = ScaledOutputNet(model, scale=20)
+            models_dict[model_idx] = model
 
     return models_dict
 
@@ -58,14 +57,22 @@ def get_all_models(experiment_folder, step, device=None):
 
 
 def cache_data(
-    experiment_folder, name, data, meta_dict, step, time_stamp
+    experiment_folder, name, data, meta_dict, step, create_time_stamp, costum_time_stamp=None, sub_name=None
 ):
     cache_folder = os.path.join(experiment_folder, "postprocessing", name)
     
     cache_folder = os.path.join(cache_folder, "step_{}".format(step))
 
-    if time_stamp:
-        cache_folder = os.path.join(cache_folder, get_time_stamp())
+    if costum_time_stamp is not None:
+        cache_folder = os.path.join(cache_folder, costum_time_stamp)
+    elif create_time_stamp:
+        curr_cache_folder = os.path.join(cache_folder, get_time_stamp())
+        # Practically we should never have two caches with the same time_stamp
+        while not os.path.exists(curr_cache_folder):
+            curr_cache_folder = os.path.join(cache_folder, get_time_stamp(micro_second=True))
+        cache_folder = curr_cache_folder
+    if sub_name is not None:
+        cache_folder = os.path.join(cache_folder, sub_name)
 
     if not os.path.exists(cache_folder):
         os.makedirs(cache_folder)
@@ -76,6 +83,41 @@ def cache_data(
     if meta_dict is not None:
         with open(os.path.join(cache_folder, "meta.yml"), "w") as f:
             yaml.dump(meta_dict, f)
+
+def join_cached_sub_data(experiment_folder, name, step, time_stamp):
+    cache_folder = os.path.join(experiment_folder, "postprocessing", name)
+    cache_folder = os.path.join(cache_folder, "step_{}".format(step))
+
+    if time_stamp is not None:
+        cache_folder = os.path.join(cache_folder, time_stamp)
+
+    list_subfolders_with_paths = [f.path for f in os.scandir(cache_folder) if f.is_dir()]
+    print(list_subfolders_with_paths)
+
+    # for root, dirs, files in os.walk("{}/runs".format(experiment_folder), topdown=False):
+    res_dict = {}
+    for curr_dir in list_subfolders_with_paths:
+
+
+        cached_data_path = os.path.join(cache_folder, "data.pkl")
+        if os.path.isfile(cached_data_path):
+            with open(cached_data_path, "rb") as f:
+                cached_data = pickle.load(f)
+            for k, v in cached_data:
+                res_dict[k] = v
+        else:
+            cached_data = None
+
+        cached_meta_path = os.path.join(cache_folder, "meta.yml")
+        if os.path.isfile(cached_meta_path):
+            with open(cached_meta_path, "rb") as f:
+                cached_meta_data = yaml.load(f)
+        else:
+            cached_meta_data = None
+
+    cache_data(experiment_folder, name, res_dict, cached_meta_data, step, time_stamp=False, costum_time_stamp=time_stamp, sub_name=None)
+
+    return cached_data, cached_meta_data
 
 def load_cached_data(experiment_folder, name, step, time_stamp=None):
     cache_folder = os.path.join(experiment_folder, "postprocessing", name)
@@ -140,7 +182,7 @@ def exp_models_path_generator(experiment_folder):
         yield curr_dir, root
 
 
-def save_models(models, model_name, model_params, experiment_root, curr_exp_name, step):
+def save_models(models, model_name, model_params, experiment_root, curr_exp_name, step, optimizers):
     models_path = os.path.join(experiment_root, "models", curr_exp_name, "step_{}".format(step))
     if not os.path.exists(models_path):
         os.makedirs(models_path)
@@ -148,7 +190,8 @@ def save_models(models, model_name, model_params, experiment_root, curr_exp_name
     for idx_model in range(len(models)):
          torch.save({'model_name': model_name,
                      'model_params': model_params,
-                     'model_state_dict': models[idx_model].state_dict()}
+                     'model_state_dict': models[idx_model].state_dict(),
+                     'optimizer_state_dict': optimizers[idx_model].state_dict()}
                     , os.path.join(models_path, "model_{}.pt".format(idx_model)))
 
 def load_model(PATH, device=None):
@@ -157,6 +200,7 @@ def load_model(PATH, device=None):
     meta_data = torch.load(PATH, map_location=device)
     model = get_nets(meta_data["model_name"], meta_data["model_params"], num_nets=1, device=device)[0]
     model.load_state_dict(meta_data['model_state_dict'])
+    model.eval()
     return model
 
 def load_configs(experiment_folder):

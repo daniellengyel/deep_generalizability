@@ -43,17 +43,28 @@ class LeNet(Module):
 class SimpleNet(Module):
    
 
-    def __init__(self, inp_dim, out_dim, width, num_layers):
+    def __init__(self, inp_dim, out_dim, width, num_layers, dropout_p=0, activation=None):
         super(SimpleNet, self).__init__()
+
+        self.dropout_p = dropout_p
+        
+        if activation is None or activation == "relu":
+            self.activation = F.relu
+        if activation == "sigmoid":
+            self.activation = F.hardsigmoid
+        if activation == "tanh":
+            self.activation = F.hardtanh
 
         self.fc_input = nn.Linear(inp_dim, width)
         self.layers = nn.ModuleList([nn.Linear(width, width) for _ in range(num_layers - 1)])
+        self.layer_dropouts = nn.ModuleList([nn.Dropout(p=self.dropout_p) for _ in range(num_layers - 1)])
         self.fc_final = nn.Linear(width, out_dim)
 
     def forward(self, x):
-        x = F.relu(self.fc_input(x))
+        x = self.activation(self.fc_input(x))
         for i in range(len(self.layers)):
-            x = F.relu(self.layers[i](x))
+            x = self.activation(self.layers[i](x))
+            x = self.layer_dropouts[i](x)
         x = self.fc_final(x)
         return x
 
@@ -164,25 +175,25 @@ class KeskarC3(Module):
         return x
 
 
-class UnitvectorOutputNet(Module):
+# class UnitvectorOutputNet(Module):
 
-    def __init__(self, model):
-        super(UnitvectorOutputNet, self).__init__()
-        self.model = model
+#     def __init__(self, model):
+#         super(UnitvectorOutputNet, self).__init__()
+#         self.model = model
 
-    def forward(self, x):
-        y = self.model(x)
-        y = y / torch.norm(y, dim=1)
-        return y
+#     def forward(self, x):
+#         y = self.model(x)
+#         y = y / torch.norm(y, dim=1)
+#         return y
 
-class ScaledOutputNet(Module):
+# class ScaledOutputNet(Module):
 
-    def __init__(self, model, scale=20):
-        super(ScaledOutputNet, self).__init__()
-        self.model = model
-        self.scale = scale
+#     def __init__(self, model, scale=20):
+#         super(ScaledOutputNet, self).__init__()
+#         self.model = model
+#         self.scale = scale
 
-    def forward(self, x):
-        y = self.model(x)
-        y = y * self.scale
-        return y
+#     def forward(self, x):
+#         y = self.model(x)
+#         y = y * self.scale
+#         return y

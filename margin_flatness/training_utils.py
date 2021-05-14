@@ -40,13 +40,17 @@ def get_optimizers(config, nets):
         optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
                             momentum=config["momentum"], weight_decay=weight_decay) for i in range(num_nets)]
     elif config["optimizer"] == "Adam":
-        optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"]) for i in range(num_nets)]
+        optimizers = [optim.Adam(nets[i].parameters(), lr=config["learning_rate"],
+                            weight_decay=weight_decay) for i in range(num_nets)]
+    elif config["optimizer"] == "RMSProp":
+        optimizers = [optim.RMSprop(nets[i].parameters(), lr=config["learning_rate"], 
+                            weight_decay=weight_decay) for i in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(config["optimizer"]))
     return optimizers
 
 def get_schedulers(config, optimizers):
-    if "learning_rate_schedule" not in config:
+    if "learning_rate_schedule" not in config or config["learning_rate_schedule"] is None:
         return None
 
     if "step" == config["learning_rate_schedule"]["name"]:

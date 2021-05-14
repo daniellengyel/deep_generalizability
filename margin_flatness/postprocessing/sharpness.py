@@ -5,11 +5,10 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 
-from sklearn.manifold import TSNE
+# from sklearn.manifold import TSNE
 
 from ..utils import *
 from ..data_getters import *
-from ..nets.Nets import UnitvectorOutputNet
 
 import yaml, os, sys, re, time
 
@@ -35,6 +34,7 @@ def get_point_traces(models, data, criterion, device=None, seed=None):
 
     for k, m in models.items():
         curr_traces = []
+        m.train()
         for i, (inputs, labels) in enumerate(dataloader):
 
             if device is not None:
@@ -57,6 +57,7 @@ def get_point_unit_traces(models, data, criterion, device=None, seed=None):
     dataloader = DataLoader(data, batch_size=1, shuffle=False) 
 
     for k, m in models.items():
+        m.train()
         curr_traces = []
         for i, (inputs, labels) in enumerate(dataloader):
 
@@ -274,6 +275,8 @@ def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose
 
     # get trace
     for k, m in models.items():
+        m.train()
+
         if verbose:
             print(k)
         a = time.time()

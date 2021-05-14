@@ -12,11 +12,16 @@ import pickle
 
 
 def main():
-    # # # save analysis processsing
+    # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
     data_name = "KMNIST"
-    exp = "May12_15-30-34_cx3-3-29.cx3.hpc.ic.ac.uk"
+
+    # Job specific 
+    ARRAY_INDEX = 0 # int(os.environ["PBS_ARRAY_INDEX"]) - 1    
+    ReLUexps = ["May13_15-55-36_cx3-6-12.cx3.hpc.ic.ac.uk", "May13_15-58-23_cx3-5-23.cx3.hpc.ic.ac.uk", "May13_16-04-19_cx3-5-4.cx3.hpc.ic.ac.uk"]
+    exp = ReLUexps[ARRAY_INDEX]
+    # exp = "May13_16-04-19_cx3-6-16.cx3.hpc.ic.ac.uk"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -28,7 +33,11 @@ def main():
         device = None
         # device = torch.device("cpu")
 
-    mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
+
+    
+    a = mf_post.multi_compute_on_experiment(experiment_folder, "point_traces", step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=4, num_gpus=0, verbose=False, meta=None)
+    print(a)
+    # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
     # print(margin_flatness.postprocessing.stats_plotting.get_end_stats(experiment_folder, step=-1, with_min_max=False))
     
     meta = {"N": 100, "delta": 0.0015, "criterion": "cross-entropy"}
@@ -37,52 +46,7 @@ def main():
     # mf_post.compute_on_experiment(experiment_folder, "point_traces", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
 
 
-    # get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
-    #                          "Trace", "Gradient"])  # TODO does not find acc and var
-
-    
-    # print("Getting Point Traces.")
-    # mf_post.get_exp_point_traces(experiment_folder, step=-1, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
-    
-    # get_exp_inp_out_jacobian(experiment_folder, step=-1, seed=0, device=device, num_datapoints=10, on_test_set=False, should_cache=True)
-
-
-    # compute all point traces over time
-    # f = lambda step: mf_post.get_exp_point_traces(experiment_folder, step=step, seed=0, device=device, num_datapoints=100, on_test_set=False, should_cache=True)
-    # mf_post.get_all_steps_f(experiment_folder, f)
-
-    # compute all loss over time 
-    # f = lambda step: get_exp_loss_acc(experiment_folder, step, train_datapoints=1000, test_datapoints=1000, device=device)
-    # get_all_steps_f(experiment_folder, f)
-
-
-    # print("Getting Point Density.")
-    # get_exp_point_eig_density(experiment_folder, -1, 0, device, num_datapoints=1000, on_test_set=False, should_cache=True)
-
-    # get_exp_final_distances(experiment_folder, device=device)
-
-    # get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
-    # get_exp_trace(experiment_folder, -1, device=device)
-
-    # mf_post.get_exp_loss_acc(experiment_folder, -1, train_datapoints=-1, test_datapoints=-1, device=device)
-
-
-    # get_grad(experiment_folder, -1, False, FCN=True)
-
-    # get_dirichlet_energy(experiment_folder, -1, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=True)
-    # get_exp_tsne(experiment_folder, -1)
 
 
 if __name__ == "__main__":
     main()
-    # import argparse
-    #
-    # parser = argparse.ArgumentParser(description='Postprocess experiment.')
-    # parser.add_argument('exp_name', metavar='exp_name', type=str,
-    #                     help='name of experiment')
-    #
-    # args = parser.parse_args()
-    #
-    # print(args)
-    #
-    # experiment_name = args.exp_name

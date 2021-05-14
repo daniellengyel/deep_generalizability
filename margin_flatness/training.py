@@ -38,6 +38,8 @@ def train(config, folder_path, train_data, test_data):
     # Init neural nets
     num_nets = config["num_nets"]
     nets = get_nets(config["net_name"], config["net_params"], num_nets, device=device)
+    for m in nets:
+        m.train()
 
     #  Define a Loss function and optimizer
     criterion = get_criterion(config=config)
@@ -55,7 +57,7 @@ def train(config, folder_path, train_data, test_data):
     with open("{}/runs/{}/{}".format(folder_path, file_stamp, "config.yml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
 
-    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=0)
+    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=0, optimizers=optimizers)
 
     # init number of steps
     curr_step = 1 
@@ -88,7 +90,7 @@ def train(config, folder_path, train_data, test_data):
 
             # save nets
             if (curr_step % config["save_model_freq"]) == 1:
-                save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step)
+                save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step, optimizers=optimizers)
         
             if (curr_step % config["print_stat_freq"]) == 1:
                 print("Step: {}".format(curr_step))
@@ -106,7 +108,7 @@ def train(config, folder_path, train_data, test_data):
         #     writer.add_scalar('Accuracy/net_{}'.format(idx_net), accuracy, curr_step)
 
     # save final nets
-    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step) # Potential TODO: Change curr_step to -1 to indicate the end.
+    save_models(nets, config["net_name"], config["net_params"], folder_path, file_stamp, step=curr_step, optimizers=optimizers) # Potential TODO: Change curr_step to -1 to indicate the end.
 
     # return nets
     return 1

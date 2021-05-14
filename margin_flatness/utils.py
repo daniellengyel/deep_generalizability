@@ -14,11 +14,14 @@ from .nets.Nets import *
 import random
 
 
-def get_file_stamp():
+def get_file_stamp(micro_second=False):
     """Return time and hostname as string for saving files related to the current experiment"""
     host_name = socket.gethostname()
     mydate = datetime.datetime.now()
-    return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S"), host_name)
+    if not micro_second:
+        return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S"), host_name)
+    else:
+        return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S-%f"), host_name)
 
 def get_time_stamp():
     """Return time as string for saving files related to the current experiment"""
