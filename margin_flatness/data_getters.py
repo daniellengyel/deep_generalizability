@@ -46,6 +46,8 @@ def get_data(data_name, vectorized=False, reduce_train_per=None, seed=0, meta=No
 
 def get_random_data_subset(data, num_datapoints=1, seed=0):
     set_seed(seed)
+    if num_datapoints == -1:
+        num_datapoints = len(data)
     data_loader = DataLoader(data, batch_size=num_datapoints, shuffle=True)
     return DataWrapper(next(iter(data_loader)))
 

@@ -18,21 +18,21 @@ import torch
 import pickle
 
 
-def get_models_loss_acc(models, train_data, test_data, criterion, loss_type, device=None, seed=None):
+def get_models_loss_acc(models, data, criterion, loss_type, device=None, seed=None):
     set_seed(seed)
     loss_dict = {}
     acc_dict = {}
 
-    train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=False)
-    test_loader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
+    data_loader = DataLoader(data, batch_size=len(data), shuffle=False)
+    # test_loader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
 
     is_binary_classification = loss_type == "BinaryExponentialLoss"
 
     for k, m in models.items():
         if device is not None:
             m = m.to(device)
-        loss_dict[k] = (get_net_loss(m, train_loader, criterion, device=device), get_net_loss(m, test_loader, criterion, device=device))
-        acc_dict[k] = (get_net_accuracy(m, train_loader, is_binary_classification, device=device), get_net_accuracy(m, test_loader, is_binary_classification, device=device))
+        loss_dict[k] = get_net_loss(m, data_loader, criterion, device=device) # , get_net_loss(m, test_loader, criterion, device=device))
+        acc_dict[k] = get_net_accuracy(m, data_loader, is_binary_classification, device=device) #, get_net_accuracy(m, test_loader, is_binary_classification, device=device))
     return loss_dict, acc_dict
 
 def get_point_loss(models, data, loss_type, device=None, unit_output=False):

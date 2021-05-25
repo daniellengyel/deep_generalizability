@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import math 
 
 import margin_flatness.postprocessing.postprocess_experiment as mf_post
 import margin_flatness
@@ -15,13 +16,25 @@ def main():
     # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
-    data_name = "KMNIST"
+    data_name = "CIFAR10"
 
     # Job specific 
-    ARRAY_INDEX = int(os.environ["PBS_ARRAY_INDEX"]) - 1    
-    ReLUexps = ["May13_15-55-36_cx3-6-12.cx3.hpc.ic.ac.uk", "May13_15-58-23_cx3-5-23.cx3.hpc.ic.ac.uk", "May13_16-04-19_cx3-5-4.cx3.hpc.ic.ac.uk"]
-    exp = ReLUexps[ARRAY_INDEX]
-    # exp = "May13_16-04-19_cx3-6-16.cx3.hpc.ic.ac.uk"
+    ReLUexps = [
+        "May22_20-49-07_cx3-3-13.cx3.hpc.ic.ac.uk",
+        "May22_20-49-07_cx3-7-1.cx3.hpc.ic.ac.uk",
+        "May22_20-49-08_cx3-7-3.cx3.hpc.ic.ac.uk",
+        "May22_20-51-16_cx3-4-2.cx3.hpc.ic.ac.uk",
+        "May22_20-51-16_cx3-5-26.cx3.hpc.ic.ac.uk",
+        "May22_20-53-25_cx3-3-29.cx3.hpc.ic.ac.uk"
+    ]
+    try:
+        TOTAL_ARRAYS = int(os.environ["TOTAL_ARRAYS"])
+        ARRAY_INDEX = int(os.environ["PBS_ARRAY_INDEX"]) - 1 
+    except:
+        ARRAY_INDEX = 1
+        TOTAL_ARRAYS = 1
+        
+    exp =  "LeNet_short" #
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -33,13 +46,39 @@ def main():
         device = None
         # device = torch.device("cpu")
 
+    # if ARRAY_INDEX == 1:
 
-    
-    mf_post.multi_compute_on_experiment(experiment_folder, "point_traces", step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=32, num_gpus=0, verbose=False, meta=None)
-    # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=1000, num_test_datapoints=1000, device=None)
+    # margin_flatness.save_load.join_cached_sub_data(experiment_folder, "model_loss_acc", -1)
+    # margin_flatness.save_load.join_cached_sub_data(experiment_folder, "output_margins", -1)
+
+    # # TODO Exp ids should be set here. 
+    meta = None # {"criterion": "normalized-cross-entropy"}
+    exp_ids = list(margin_flatness.save_load.exp_models_path_generator(experiment_folder))
+
+    start_idx = math.ceil(len(exp_ids) / TOTAL_ARRAYS) * ARRAY_INDEX
+    end_idx = math.ceil(len(exp_ids) / TOTAL_ARRAYS) * (ARRAY_INDEX + 1)
+    exp_ids_curr = exp_ids[start_idx:end_idx]
+    print(start_idx)
+    print(end_idx)
+    print(len(exp_ids_curr))
+    print(len(exp_ids))
+
+    num_cpus = 32
+    num_gpus = 1
+
+    # exp_ids = [("1621270824.0509984", os.path.join(experiment_folder, "models", "1621270824.0509984"))]
+    # mf_post.multi_compute_on_experiment(experiment_folder, "model_loss_acc", exp_ids_curr, step=-1, seed=0, num_datapoints=-1, on_test_set=False, num_cpus=num_cpus, num_gpus=num_gpus, verbose=True, meta=None)
+    # mf_post.multi_compute_on_experiment(experiment_folder, "model_loss_acc", exp_ids_curr, step=-1, seed=0, num_datapoints=-1, on_test_set=True, num_cpus=num_cpus, num_gpus=num_gpus, verbose=True, meta=None)
+
+    # mf_post.multi_compute_on_experiment(experiment_folder, "output_margins", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=None)
+    mf_post.multi_compute_on_experiment(experiment_folder, "point_loss", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=meta)
+    # mf_post.multi_compute_on_experiment(experiment_folder, "point_traces", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=meta)
+    # mf_post.multi_compute_on_experiment(experiment_folder, "inp_out_jacobian", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=None)
+
+
+    # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=5000, num_test_datapoints=5000, device=device)
     # print(margin_flatness.postprocessing.stats_plotting.get_end_stats(experiment_folder, step=-1, with_min_max=False))
     
-    meta = {"N": 100, "delta": 0.0015, "criterion": "cross-entropy"}
 
     # mf_post.compute_on_experiment(experiment_folder, "point_loss", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)
     # mf_post.compute_on_experiment(experiment_folder, "point_traces", -1, 0, 100, on_test_set=False, device=None, verbose=True, check_cache=False, meta=meta)

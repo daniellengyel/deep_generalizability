@@ -7,6 +7,7 @@ from ..save_load import load_all_cached_meta_data, cache_data, load_configs, get
 from ..data_getters import *
 from ..data_getters import get_random_data_subset
 from ..training_utils import get_criterion
+from ..nets.Nets import NormOutputNet
 
 from .sharpness import get_affine_trace, sample_average_flatness_pointwise, get_point_traces, get_point_unit_traces
 from .model_related import get_point_loss, get_models_loss_acc
@@ -42,8 +43,16 @@ def get_runs(experiment_folder, names):
     return run_dir
 
 # Ok not to have explicit seed since we are using the whole dataset.
-def get_exp_loss_acc(experiment_folder, step, seed=0, num_train_datapoints=-1, num_test_datapoints=-1, device=None):
+def get_exp_loss_acc(experiment_folder, step, seed=0, num_train_datapoints=-1, num_test_datapoints=-1, device=None, check_cache=False):
     meta_dict = {"seed": seed, "num_train_datapoints": num_train_datapoints, "num_test_datapoints": num_test_datapoints, "step": step}
+
+    if check_cache:
+        acc_results = check_if_already_computed(experiment_folder, "acc", step, meta_dict)
+        loss_results = check_if_already_computed(experiment_folder, "acc", step, meta_dict)
+
+        if acc_results is not None and loss_results is not None:
+            print("Got cached results.")
+            return loss_results, acc_results
 
     print("Get loss acc")
     # init
@@ -81,7 +90,7 @@ def get_exp_loss_acc(experiment_folder, step, seed=0, num_train_datapoints=-1, n
 
 
 
-def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, on_test_set, device, verbose=False, check_cache=True, meta=None):
+def compute_on_experiment(experiment_folder, name, exp_ids, step, seed, num_datapoints, on_test_set, device, verbose=False, check_cache=True, meta=None):
 
     meta_dict = {"seed": seed, "num_datapoints": num_datapoints, "on_test_set": on_test_set, "step": step}
     meta_dict["meta"] = meta
@@ -105,11 +114,13 @@ def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, o
 
     # iterate through models
     for exp_name, curr_path in tqdm(exp_models_path_generator(experiment_folder), disable=(not verbose)):
-        criterion = get_criterion(cfgs.loc[exp_name])
-        if meta["criterion"] is None:
+        if (not exp_ids is None) and (exp_name not in exp_ids):
+            continue
+        if meta_dict["meta"] is None or meta_dict["meta"]["criterion"] is None:
             loss_type = cfgs.loc[exp_name]["criterion"]
         else:
-            loss_type = meta["criterion"]
+            loss_type = meta_dict["meta"]["criterion"]
+        criterion = get_criterion(loss_type=loss_type)
 
         models_dict = get_models(curr_path, step, device)
         if models_dict is None:
@@ -123,7 +134,7 @@ def compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, o
     return results_dict
 
 # iterate through models
-def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict, on_gpu=False):
+def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict, on_gpu=False):    
     exp_name, curr_path = exp_id_path["exp_paths"]
     if on_gpu:
         torch.backends.cudnn.enabled = True
@@ -131,16 +142,23 @@ def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, se
     else:
         device = None
         # device = torch.device("cpu")
+    
+    cfg = cfgs.loc[exp_name]
 
-    criterion = get_criterion(cfgs.loc[exp_name])
     if meta_dict["meta"] is None or meta_dict["meta"]["criterion"] is None:
-        loss_type = cfgs.loc[exp_name]["criterion"]
+        loss_type = cfg["criterion"]
     else:
         loss_type = meta_dict["meta"]["criterion"]
+    criterion = get_criterion(loss_type=loss_type)
+
 
     models_dict = get_models(curr_path, step, device)
     if models_dict is None:
         return
+
+    if ("meta" in meta_dict) and ("nomralize_output" in meta_dict["meta"]) and (meta_dict["meta"]["normalize_output"]):
+        for k, m in models_dict.items():
+            models_dict[k] = NormOutputNet(m)
 
     results_dict = {}
     # results_dict[exp_name] = exp_name
@@ -152,14 +170,13 @@ def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, se
 
     
 
-def multi_compute_on_experiment(experiment_folder, name, step, seed, num_datapoints, on_test_set, num_cpus, num_gpus=0, verbose=False, meta=None):
-
+def multi_compute_on_experiment(experiment_folder, name, exp_ids_paths, step, seed, num_datapoints, on_test_set, num_cpus, num_gpus=0, verbose=False, meta=None):
     meta_dict = {"seed": seed, "num_datapoints": num_datapoints, "on_test_set": on_test_set, "step": step}
     meta_dict["meta"] = meta
 
-    cfgs = load_configs(experiment_folder)
-    exp_name_paths = {"exp_paths": tune.grid_search(list(exp_models_path_generator(experiment_folder)))}
-    time_stamp = get_time_stamp()
+    cfgs = load_configs(experiment_folder).loc[[exp_id[0] for exp_id in exp_ids_paths]]
+    exp_name_paths = {"exp_paths": tune.grid_search(exp_ids_paths)}
+    time_stamp = get_time_stamp(micro_second=True)
 
     # get data
     train_data, test_data = get_data_for_experiment(experiment_folder)
@@ -168,19 +185,19 @@ def multi_compute_on_experiment(experiment_folder, name, step, seed, num_datapoi
     else:
         data = get_random_data_subset(train_data, num_datapoints=num_datapoints, seed=seed)
 
+    if len(exp_ids_paths) == 1:
+        get_model_results({"exp_paths": exp_ids_paths[0]}, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict)
+        return
 
-    # ray.shutdown()
+    ray.shutdown()
     ray.init(_temp_dir='/rds/general/user/dl2119/ephemeral', num_cpus=num_cpus, num_gpus=num_gpus)
 
     if num_gpus > 0:
-        tune.run(lambda exp_id_path: get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict, on_gpu=True), config=exp_name_paths, resources_per_trial={'gpu': 1})
+        tune.run(tune.with_parameters(lambda exp_id_path, data: get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict, on_gpu=True), data=data), config=exp_name_paths, resources_per_trial={'gpu': 1})
     else:
-        tune.run(lambda exp_id_path: get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict), config=exp_name_paths)
+        tune.run(tune.with_parameters(lambda exp_id_path, data: get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, seed, time_stamp, meta_dict), data=data), config=exp_name_paths)
     
-    # cache data
-    results_dict = join_cached_sub_data(experiment_folder, name, step, time_stamp)    
-    
-    return results_dict
+    return time_stamp
 
 
 def helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_type, device=None, meta=None):
@@ -220,6 +237,8 @@ def helper_compute_on_experiment(name, models_dict, data, seed, criterion, loss_
     elif name == "point_unit_loss":
         return get_point_loss(models_dict, data, loss_type, device=device, unit_output=True)
 
+    elif name == "model_loss_acc":
+        return get_models_loss_acc(models_dict, data, criterion, loss_type, device=device)
 
 def check_if_already_computed(experiment_folder, name, step, meta_data):
 

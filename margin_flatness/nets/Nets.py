@@ -174,6 +174,25 @@ class KeskarC3(Module):
 
         return x
 
+class NormOutputNet(Module):
+
+    def __init__(self, model):
+        super(NormOutputNet, self).__init__()
+        self.model = model
+        self.norm_scale = None
+
+    def forward(self, x):
+        if self.norm_scale is None:
+            self._set_norm_scale(x)
+
+        y = self.model(x)
+        y = y / self.norm_scale
+        return y
+    
+    def _set_norm_scale(self, x):
+        unit_input = torch.ones(x[0].shape)[np.newaxis, :]
+        unit_input /= torch.norm(unit_input)
+        self.norm_scale = torch.norm(self.model(unit_input))
 
 # class UnitvectorOutputNet(Module):
 

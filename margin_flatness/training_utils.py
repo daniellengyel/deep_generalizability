@@ -73,6 +73,16 @@ def get_criterion(config=None, loss_type=None, device=None):
         return lambda outputs, labels: torch.nn.MSELoss(reduction="mean")(outputs, torch.nn.functional.one_hot(labels, outputs.shape[1]).float())
     elif loss_type == "cross-entropy":
         return torch.nn.CrossEntropyLoss()
+    elif loss_type == "normalized-cross-entropy":
+        def NormalizedCrossEntropyLoss():
+            cross_entropy = torch.nn.CrossEntropyLoss()
+            def helper(outputs, labels):
+                mu = torch.sum(outputs, dim=1)
+                divisor = torch.mean(torch.pow(outputs - mu.reshape(-1, 1), 2))
+                outputs_prime = outputs / torch.pow(divisor, 0.5)
+                return cross_entropy(outputs_prime, labels)
+            return helper
+        return NormalizedCrossEntropyLoss()
     elif loss_type == "MultiMarginLoss":
         return torch.nn.MultiMarginLoss()
     elif loss_type == "BinaryExponentialLoss":

@@ -20,7 +20,7 @@ setup(
         "torch",
         "torchvision",
         "tensorboard==2.3.0",
-        "ray[tune]",
+        # "ray[tune]",
         "numpy",
         "matplotlib",
         "pandas",

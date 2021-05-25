@@ -16,7 +16,7 @@ config = {}
 ARRAY_INDEX = int(os.environ["PBS_ARRAY_INDEX"]) - 1
 
 # data specific
-data_name = "KMNIST"
+data_name = "CIFAR10"
 
 if data_name == "CIFAR10":
     num_channels = 3
@@ -58,19 +58,24 @@ config["data_name"] = data_name
 config["reduce_train_per"] = 1
 
 # net
-config["net_name"] = "SimpleNet"
-if ARRAY_INDEX // 3 == 0:
-    activation_function = "relu"
-elif ARRAY_INDEX // 3 == 1:
-    activation_function = "sigmoid"
-elif ARRAY_INDEX // 3 == 2:
-    activation_function = "tanh" 
+config["net_name"] = "LeNet"
 
 
 if config["net_name"] == "SimpleNet":
+    # if (ARRAY_INDEX % 6 // 3) == 0:
+    #     width = 256 
+    #     num_layers = 4 
+    #     dropout_p = 0
+    # elif (ARRAY_INDEX % 6 // 3) == 1:
     width = 256 
-    num_layers = 4 
+    num_layers = 8 
     dropout_p = 0
+    # elif (ARRAY_INDEX // 3 % 3) == 2:
+    #     width = 256 
+    #     num_layers = 8 
+    #     dropout_p = 0
+    
+    activation_function = "relu"
 
     config["net_params"] = [inp_dim, out_dim, width, num_layers, dropout_p, activation_function]
 elif config["net_name"] == "LinearNet":
@@ -85,37 +90,47 @@ elif config["net_name"] == "KeskarC3":
 
 config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
 
-config["optimizer"] = "SGD" # tune.grid_search(["SGD"])
 
 if ARRAY_INDEX % 3 == 0:
     config["optimizer"] = tune.grid_search(["SGD"])
+    config["learning_rate"] = tune.grid_search([0.1, 0.075, 0.05, 0.025, 0.01, 0.005]) # tune.grid_search([1, 0.25, 0.1, 0.05, 0.01, 0.001])
 elif ARRAY_INDEX % 3 == 1:
     config["optimizer"] = tune.grid_search(["Adam"])
+    config["learning_rate"] = tune.grid_search([0.0005, 0.00025, 0.0001, 0.000075, 0.00005, 0.000025]) # tune.grid_search([1, 0.25, 0.1, 0.05, 0.01, 0.001])
 elif ARRAY_INDEX % 3 == 2:
     config["optimizer"] = tune.grid_search(["RMSProp"])
+    config["learning_rate"] = tune.grid_search([0.0005, 0.00025, 0.0001, 0.000075, 0.00005, 0.000025]) # tune.grid_search([1, 0.25, 0.1, 0.05, 0.01, 0.001])
 
-config["weight_decay"] = tune.grid_search([0, 0.0001, 0.0005])  # l2 penalty 
-config["learning_rate"] = tune.grid_search([0.1, 0.05, 0.01, 0.005, 0.001]) # tune.grid_search([1, 0.25, 0.1, 0.05, 0.01, 0.001])
+# config["optimizer"] = tune.grid_search(["SGD"])
+# config["learning_rate"] = 0.01 
+
+config["weight_decay"] = tune.grid_search([0, 0.0001]) # , 0.00025])  # l2 penalty 
 config["momentum"] = 0.9
 config["learning_rate_schedule"] = None # {"name": "step", "gamma": 0.75, "step_size": 10000} # step size is number of steps until applying multiplicative gamma
 
-config["batch_train_size"] = tune.grid_search([32, 64, 256])
+
+config["batch_train_size"] = tune.grid_search([128, 256])
+# if ARRAY_INDEX // 9 == 0:
+#     config["batch_train_size"] = tune.grid_search([64, 256])
+# else:
+#     config["batch_train_size"] = tune.grid_search([32, 1024])
+
 config["batch_test_size"] = 1 # tune.grid_search([16])
 
-config["criterion"] = "MSE"
+if ARRAY_INDEX // 3 == 0:
+    config["criterion"] = "cross-entropy"
+else:
+    config["criterion"] = "MSE"
 
-config["num_steps"] = 25000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+# config["criterion"] = tune.grid_search(["cross-entropy", "MSE"])
+
+config["num_steps"] = 100000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = 0 # 0.0005 # 0.01 # 0.15
-
 
 config["save_model_freq"] = 10000
 config["print_stat_freq"] = 1000
 
-<<<<<<< Updated upstream
 config["seed"] = tune.grid_search([0, 5, 10])
-=======
-config["seed"] = 0 # tune.grid_search([0, 5, 10])
->>>>>>> Stashed changes
 config["device"] = "cpu"
 config["data_seed"] = 0 # should generally not be changed. 
 
@@ -133,11 +148,7 @@ train_data, test_data = mf.data_getters.get_data(data_name, vectorized=config["n
 
 
 # ray.shutdown()
-<<<<<<< Updated upstream
 ray.init(_temp_dir='/rds/general/user/dl2119/ephemeral', num_cpus=32)
-=======
-# ray.init(_temp_dir='/rds/general/user/dl2119/ephemeral', num_cpus=4)
->>>>>>> Stashed changes
 
 if config["device"] == "gpu":
     tune.run(lambda config_inp: mf.training.train(config_inp, folder_path, train_data, test_data), config=config, resources_per_trial={'gpu': 1})

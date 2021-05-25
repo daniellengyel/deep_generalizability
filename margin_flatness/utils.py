@@ -23,10 +23,13 @@ def get_file_stamp(micro_second=False):
     else:
         return "{}_{}".format(mydate.strftime("%b%d_%H-%M-%S-%f"), host_name)
 
-def get_time_stamp():
+def get_time_stamp(micro_second=False):
     """Return time as string for saving files related to the current experiment"""
     mydate = datetime.datetime.now()
-    return "{}".format(mydate.strftime("%b%d_%H-%M-%S"))
+    if not micro_second:
+        return "{}".format(mydate.strftime("%b%d_%H-%M-%S"))
+    else:
+        return "{}".format(mydate.strftime("%b%d_%H-%M-%S-%f"))
 
 def set_seed(seed):
     if seed is None:
