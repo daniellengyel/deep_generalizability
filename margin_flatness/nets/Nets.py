@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Module
 import torch
+import numpy as np
 
 import functools
 import operator
@@ -41,8 +42,6 @@ class LeNet(Module):
 
 
 class SimpleNet(Module):
-   
-
     def __init__(self, inp_dim, out_dim, width, num_layers, dropout_p=0, activation=None):
         super(SimpleNet, self).__init__()
 
@@ -186,14 +185,16 @@ class NormOutputNet(Module):
             self._set_norm_scale(x)
 
         y = self.model(x)
-        y = y / self.norm_scale
+        # print(torch.norm(y[0]))
+        y = y * 25#/ self.norm_scale
         return y
     
     def _set_norm_scale(self, x):
         unit_input = torch.ones(x[0].shape)[np.newaxis, :]
-        unit_input /= torch.norm(unit_input)
-        self.norm_scale = torch.norm(self.model(unit_input))
-
+        print(torch.norm(self.model(x)))
+        unit_input /= (torch.norm(unit_input))
+        self.norm_scale =  torch.norm(self.model(unit_input)) / 10  # torch.norm(self.model(x)) / 25
+        print(self.norm_scale)
 # class UnitvectorOutputNet(Module):
 
 #     def __init__(self, model):

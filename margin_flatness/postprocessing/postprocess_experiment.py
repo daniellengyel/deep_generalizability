@@ -123,6 +123,10 @@ def compute_on_experiment(experiment_folder, name, exp_ids, step, seed, num_data
         criterion = get_criterion(loss_type=loss_type)
 
         models_dict = get_models(curr_path, step, device)
+        if (meta_dict["meta"] is not None) and ("normalize_output" in meta_dict["meta"]) and (meta_dict["meta"]["normalize_output"]):
+            for k, m in models_dict.items():
+                models_dict[k] = NormOutputNet(m)
+
         if models_dict is None:
             continue
 
@@ -156,7 +160,7 @@ def get_model_results(exp_id_path, experiment_folder, cfgs, step, name, data, se
     if models_dict is None:
         return
 
-    if ("meta" in meta_dict) and ("nomralize_output" in meta_dict["meta"]) and (meta_dict["meta"]["normalize_output"]):
+    if ("meta" in meta_dict) and ("normalize_output" in meta_dict["meta"]) and (meta_dict["meta"]["normalize_output"]):
         for k, m in models_dict.items():
             models_dict[k] = NormOutputNet(m)
 

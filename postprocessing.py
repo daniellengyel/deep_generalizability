@@ -16,7 +16,7 @@ def main():
     # save analysis processsing
 
     root_folder = os.environ["PATH_TO_DEEP_FOLDER"]
-    data_name = "CIFAR10"
+    data_name = "KMNIST"
 
     # Job specific 
     ReLUexps = [
@@ -34,7 +34,8 @@ def main():
         ARRAY_INDEX = 1
         TOTAL_ARRAYS = 1
         
-    exp =  "LeNet_short" #
+    # exp =  "LeNet_short" #
+    exp = "w128_l8_ReLU_long"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     # init torch
@@ -52,7 +53,7 @@ def main():
     # margin_flatness.save_load.join_cached_sub_data(experiment_folder, "output_margins", -1)
 
     # # TODO Exp ids should be set here. 
-    meta = None # {"criterion": "normalized-cross-entropy"}
+    meta = {"criterion": "cross-entropy", "normalize_output": True}
     exp_ids = list(margin_flatness.save_load.exp_models_path_generator(experiment_folder))
 
     start_idx = math.ceil(len(exp_ids) / TOTAL_ARRAYS) * ARRAY_INDEX
@@ -71,9 +72,9 @@ def main():
     # mf_post.multi_compute_on_experiment(experiment_folder, "model_loss_acc", exp_ids_curr, step=-1, seed=0, num_datapoints=-1, on_test_set=True, num_cpus=num_cpus, num_gpus=num_gpus, verbose=True, meta=None)
 
     # mf_post.multi_compute_on_experiment(experiment_folder, "output_margins", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=None)
-    mf_post.multi_compute_on_experiment(experiment_folder, "point_loss", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=meta)
+    # mf_post.multi_compute_on_experiment(experiment_folder, "point_loss", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=meta)
     # mf_post.multi_compute_on_experiment(experiment_folder, "point_traces", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=meta)
-    # mf_post.multi_compute_on_experiment(experiment_folder, "inp_out_jacobian", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=None)
+    mf_post.multi_compute_on_experiment(experiment_folder, "inp_out_jacobian", exp_ids_curr, step=-1, seed=0, num_datapoints=1000, on_test_set=False, num_cpus=num_cpus, num_gpus=0, verbose=True, meta=None)
 
 
     # mf_post.get_exp_loss_acc(experiment_folder, step=-1, seed=0, num_train_datapoints=5000, num_test_datapoints=5000, device=device)
